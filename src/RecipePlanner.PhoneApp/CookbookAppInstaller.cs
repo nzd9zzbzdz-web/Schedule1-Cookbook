@@ -33,7 +33,7 @@ namespace RecipePlanner.PhoneApp
         private static bool _installed;
 
 #if IL2CPP
-        public static bool IsInstalled => CookbookEmbed.IsInstalled;
+        public static bool IsInstalled => _standaloneInstalled || CookbookEmbed.IsInstalled;
 #else
         public static bool IsInstalled => _installed && CookbookApp.Instance != null;
 #endif
@@ -50,11 +50,21 @@ namespace RecipePlanner.PhoneApp
             if (!Il2CppTypes.EnsureRegistered()) return false;
 
 #if IL2CPP
-            // Different shape entirely on this branch: a panel inside the Products app rather than
-            // an app of its own, because App<T> cannot be subclassed here. See CookbookEmbed.
             RecipePlannerUI.CacheInvalidated = IconSource.Clear;
             UiSkin.Clear();
             CookbookScreen.ForgetEffectColours();
+
+            // A real app first, and the in-Products panel only if that fails.
+            //
+            // The app is the better result — its own icon on the home screen, exactly like the Mono
+            // build — but it is also the riskier one: it derives from ProductManagerApp and has to
+            // hand the singleton back, and getting that wrong costs the player their Products
+            // screen rather than merely costing them ours. The panel needs no subclassing at all
+            // and is known to work, so it stays as the floor rather than being deleted.
+            if (TryInstallStandaloneApp()) return true;
+
+            RecipePlannerUI.Log?.Info(
+                "Falling back to the Cookbook panel inside the Products app.");
             return CookbookEmbed.TryInstall();
 #else
 
@@ -109,6 +119,58 @@ namespace RecipePlanner.PhoneApp
             }
 #endif
         }
+
+#if IL2CPP
+        private static bool _standaloneInstalled;
+
+        /// <summary>
+        /// Clones the Products app and makes the clone ours, keeping its own home-screen icon.
+        ///
+        /// The component is NOT stripped here, unlike the Mono path. Our type derives from
+        /// <c>ProductManagerApp</c>, so adding it to a clone that still carries the original would
+        /// leave two apps on one object; the original is removed and ours put in its place, which
+        /// is the same swap the Mono build does with a different base class.
+        ///
+        /// Cloned inactive so no Awake runs until the swap is done — otherwise the original
+        /// component wakes first and takes the singleton before we can protect it.
+        /// </summary>
+        private static bool TryInstallStandaloneApp()
+        {
+            try
+            {
+                var source = FindTemplateApp();
+                if (source == null) return false;
+
+                var clone = CloneInactive(source);
+                if (clone == null) return false;
+
+                var wiring = CaptureAppWiring(clone);
+                StripSourceComponents(clone);
+
+                clone.name = "CookbookApp";
+                var app = clone.AddComponent<CookbookAppIl2Cpp>();
+                if (app == null)
+                {
+                    // Injection said yes but the component did not appear. Leave nothing behind.
+                    UnityEngine.Object.Destroy(clone);
+                    return false;
+                }
+
+                RestoreAppWiring(app, wiring);
+                clone.SetActive(true);
+
+                _standaloneInstalled = true;
+                RecipePlannerUI.Log?.Info("Cookbook installed as its own app on IL2CPP.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                RecipePlannerUI.Log?.Warn(
+                    "Could not install the standalone Cookbook app on IL2CPP: " + ex.Message);
+                return false;
+            }
+        }
+#endif
 
         /// <summary>
         /// The product app is the closest structural match — a scrolling list with a detail panel —
@@ -172,7 +234,10 @@ namespace RecipePlanner.PhoneApp
             return captured;
         }
 
-        private static void RestoreAppWiring(CookbookApp app, Dictionary<string, object> captured)
+        /// <param name="app">Typed as Component because the two branches build different app
+        /// classes — CookbookApp on Mono, CookbookAppIl2Cpp on IL2CPP — and this works entirely by
+        /// field name on whichever App base is found by walking up from the runtime type.</param>
+        private static void RestoreAppWiring(Component app, Dictionary<string, object> captured)
         {
             if (app == null || captured == null || captured.Count == 0)
             {

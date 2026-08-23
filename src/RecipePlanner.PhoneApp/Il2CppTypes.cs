@@ -45,6 +45,9 @@ namespace RecipePlanner.PhoneApp
             // running game — the two types below registered without complaint in the same pass that
             // CookbookApp failed, which is what proved the problem is the generic base and not the
             // mechanism. This branch uses CookbookEmbed instead, which subclasses nothing.
+            // One question, asked once, acting on nothing. See CookbookAppProbe.
+            CookbookAppProbe.Ask();
+
             var scroll = Register<SmoothScroll>("SmoothScroll");
             var glow = Register<HoverGlow>("HoverGlow");
 
