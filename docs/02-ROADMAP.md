@@ -20,7 +20,7 @@ Legend: ✅ done and tested · 🟡 logic complete and tested, needs the live ga
 | 10 | Production History | Events survive a restart; replaying the log reproduces identical totals | ✅ verified live across a full process restart |
 | 11 | Player Statistics | Units, batches, per-product breakdown, ingredient usage, value, profit | ✅ verified live (money pending Phase 5) |
 | 12 | Automatic Recipe Discovery | A recipe invented in-game appears in the cookbook unprompted | ✅ verified live |
-| 13 | Cookbook &amp; Stats app | A phone app showing recipes grouped by strain, with the chain | ✅ installs, renders, and has sort / filter / hide / favourite controls |
+| 13 | Cookbook &amp; Stats app | A phone app showing recipes grouped by strain, with the chain | ✅ cookbook, statistics screen and mixing guide, all in-app |
 | 14 | Recipe Comparison | — | ⬜ |
 | 15 | Inventory Integration | — | ⬜ |
 | 16 | Recipe Optimization | — | ⬜ |

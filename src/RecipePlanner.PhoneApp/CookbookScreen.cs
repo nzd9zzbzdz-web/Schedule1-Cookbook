@@ -196,7 +196,7 @@ namespace RecipePlanner.PhoneApp
             // was empty anyway rather than taking any from them.
             _strip = CreateChild(_root, "StrainStrip");
             Anchor(_strip, new Vector2(0f, 1f), new Vector2(1f, 1f),
-                   new Vector2(8f, StripBottom), new Vector2(-GuideButtonWidth - 16f, StripTop));
+                   new Vector2(8f, StripBottom), new Vector2(-DestinationsWidth - 16f, StripTop));
 
             BuildGuideButton(font);
 
@@ -1605,11 +1605,14 @@ namespace RecipePlanner.PhoneApp
 
         // ---------- mix guide ----------
 
-        // Wide enough to read as a destination rather than another toolbar control. It sits beside
-        // the strain tiles, which are 72px squares, so anything much narrower reads as one of them.
-        private const float GuideButtonWidth = 150f;
+        // Two destination buttons side by side. Wide enough each to read as somewhere to go rather
+        // than another toolbar control — they sit beside 72px strain tiles, and anything much
+        // narrower reads as one of them.
+        private const float GuideButtonWidth = 104f;
+        private const float DestinationsWidth = GuideButtonWidth * 2f + 6f;
 
         private MixGuideScreen _mixGuide;
+        private StatsScreen _stats;
 
         /// <summary>
         /// Opens the mixing reference. Built lazily on first use rather than alongside the cookbook:
@@ -1618,19 +1621,41 @@ namespace RecipePlanner.PhoneApp
         /// </summary>
         private void BuildGuideButton(Font font)
         {
-            var button = CreateChild(_root, "GuideButton");
+            // Rightmost first, then leftward — offsets are measured from the right edge, so laying
+            // them out in that order keeps the arithmetic obvious.
+            Destination(font, "StatsButton", "STATS", UiSkin.BarChart, -8f, () =>
+            {
+                if (_stats == null) _stats = StatsScreen.CreateInto(_root, ResolveFont(_root));
+                _stats.Open(_model);
+            });
+
+            Destination(font, "GuideButton", "MIX\nGUIDE", UiSkin.PotLeaf, -GuideButtonWidth - 14f, () =>
+            {
+                if (_mixGuide == null) _mixGuide = MixGuideScreen.CreateInto(_root, ResolveFont(_root));
+                _mixGuide.Open();
+            });
+        }
+
+        /// <summary>
+        /// A button that leaves the cookbook.
+        ///
+        /// Outlined in the accent, unlike every other control on the screen. Everything else here
+        /// changes what the list shows; these two replace it entirely, and a destination should not
+        /// look like a toggle.
+        /// </summary>
+        private void Destination(Font font, string name, string label, Sprite icon, float right, Action open)
+        {
+            var button = CreateChild(_root, name);
             button.anchorMin = new Vector2(1f, 1f);
             button.anchorMax = new Vector2(1f, 1f);
             button.pivot = new Vector2(1f, 1f);
-            button.offsetMin = new Vector2(-GuideButtonWidth - 8f, StripBottom);
-            button.offsetMax = new Vector2(-8f, StripTop);
+            button.offsetMin = new Vector2(right - GuideButtonWidth, StripBottom);
+            button.offsetMax = new Vector2(right, StripTop);
 
             var image = button.gameObject.AddComponent<Image>();
             StyleRoundedButton(button, image);
             image.color = TileFillSelected;
 
-            // Outlined in the accent, unlike every other control. It is the only thing on this
-            // screen that leaves it, and a destination should not look like a toggle.
             var outline = CreateChild(button, "Outline");
             Anchor(outline, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var outlineImage = outline.gameObject.AddComponent<Image>();
@@ -1639,23 +1664,23 @@ namespace RecipePlanner.PhoneApp
             outlineImage.color = Neon;
             outlineImage.raycastTarget = false;
 
-            var leaf = CreateChild(button, "Leaf");
-            leaf.anchorMin = new Vector2(0.5f, 0f);
-            leaf.anchorMax = new Vector2(0.5f, 0f);
-            leaf.pivot = new Vector2(0.5f, 0f);
-            leaf.sizeDelta = new Vector2(30f, 30f);
-            leaf.anchoredPosition = new Vector2(0f, 8f);
+            var glyph = CreateChild(button, "Glyph");
+            glyph.anchorMin = new Vector2(0.5f, 0f);
+            glyph.anchorMax = new Vector2(0.5f, 0f);
+            glyph.pivot = new Vector2(0.5f, 0f);
+            glyph.sizeDelta = new Vector2(28f, 28f);
+            glyph.anchoredPosition = new Vector2(0f, 8f);
 
-            var leafImage = leaf.gameObject.AddComponent<Image>();
-            leafImage.sprite = UiSkin.PotLeaf;
-            leafImage.color = Neon;
-            leafImage.preserveAspect = true;
-            leafImage.raycastTarget = false;
+            var glyphImage = glyph.gameObject.AddComponent<Image>();
+            glyphImage.sprite = icon;
+            glyphImage.color = Neon;
+            glyphImage.preserveAspect = true;
+            glyphImage.raycastTarget = false;
 
-            var label = CreateText(button, "Label", "MIX\nGUIDE", font, ToolFontSize + 3, FontStyle.Bold);
-            label.alignment = TextAnchor.UpperCenter;
-            label.color = Neon;
-            Anchor(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(0f, 36f), new Vector2(0f, -8f));
+            var text = CreateText(button, "Label", label, font, ToolFontSize + 2, FontStyle.Bold);
+            text.alignment = TextAnchor.UpperCenter;
+            text.color = Neon;
+            Anchor(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(0f, 34f), new Vector2(0f, -6f));
 
             var clickable = button.gameObject.AddComponent<Button>();
             clickable.targetGraphic = image;
@@ -1664,15 +1689,15 @@ namespace RecipePlanner.PhoneApp
             {
                 try
                 {
+                    // Whichever screen opens covers the cookbook, so a card left hanging over it
+                    // would float above the new screen with nothing underneath to explain it.
                     HideEffects();
                     _pinnedProductId = null;
-
-                    if (_mixGuide == null) _mixGuide = MixGuideScreen.CreateInto(_root, ResolveFont(_root));
-                    _mixGuide.Open();
+                    open();
                 }
                 catch (Exception ex)
                 {
-                    RecipePlannerUI.Log?.Error("Mix guide failed to open: " + ex);
+                    RecipePlannerUI.Log?.Error(name + " failed to open: " + ex);
                 }
             });
         }

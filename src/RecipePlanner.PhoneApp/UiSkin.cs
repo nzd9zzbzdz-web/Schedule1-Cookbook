@@ -38,6 +38,7 @@ namespace RecipePlanner.PhoneApp
         private static Sprite _ring;
         private static Sprite _pill;
         private static Sprite _leaf;
+        private static Sprite _barChart;
 
         /// <summary>A rounded rectangle, 9-sliced so it never distorts however it is stretched.</summary>
         public static Sprite Body => _body ?? (_body = BuildBody());
@@ -68,6 +69,14 @@ namespace RecipePlanner.PhoneApp
         /// at a size large enough for the biggest place it appears.
         /// </summary>
         public static Sprite PotLeaf => _leaf ?? (_leaf = BuildLeaf());
+
+        /// <summary>
+        /// Three rising bars, for the statistics screen.
+        ///
+        /// Rising rather than equal height: a chart glyph made of identical bars reads as a list or
+        /// a menu, and the whole job of an icon here is to say "numbers" before the label is read.
+        /// </summary>
+        public static Sprite BarChart => _barChart ?? (_barChart = BuildBarChart());
 
         /// <summary>
         /// How far inside the leaf a point is, 0 outside and rising to 1 at a leaflet's spine.
@@ -131,6 +140,7 @@ namespace RecipePlanner.PhoneApp
             Destroy(ref _ring);
             Destroy(ref _pill);
             Destroy(ref _leaf);
+            Destroy(ref _barChart);
         }
 
         private static void Destroy(ref Sprite sprite)
@@ -242,6 +252,52 @@ namespace RecipePlanner.PhoneApp
             texture.Apply(false, false);
 
             var sprite = Sprite.Create(texture, new Rect(0f, 0f, LeafSize, LeafSize), new Vector2(0.5f, 0.5f));
+            sprite.hideFlags = HideFlags.HideAndDontSave;
+            return sprite;
+        }
+
+        private static Sprite BuildBarChart()
+        {
+            const int size = 64;
+            var pixels = new Color[size * size];
+
+            // Left edge, width and height of each bar, as fractions of the sprite.
+            var lefts = new[] { 0.10f, 0.40f, 0.70f };
+            var heights = new[] { 0.38f, 0.66f, 0.94f };
+            const float barWidth = 0.20f;
+            const float baseline = 0.06f;
+
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                var u = (x + 0.5f) / size;
+                var v = (y + 0.5f) / size;
+
+                var a = 0f;
+                for (var i = 0; i < lefts.Length; i++)
+                {
+                    if (u < lefts[i] || u > lefts[i] + barWidth) continue;
+                    if (v < baseline || v > heights[i]) continue;
+
+                    // Softened at the vertical edges only; the tops and the baseline are meant to
+                    // line up crisply with each other.
+                    var edge = Mathf.Min(u - lefts[i], lefts[i] + barWidth - u) * size;
+                    a = Mathf.Max(a, Mathf.Clamp01(edge));
+                }
+
+                pixels[y * size + x] = new Color(1f, 1f, 1f, a);
+            }
+
+            var texture = new Texture2D(size, size, TextureFormat.ARGB32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.HideAndDontSave,
+            };
+            texture.SetPixels(pixels);
+            texture.Apply(false, false);
+
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f));
             sprite.hideFlags = HideFlags.HideAndDontSave;
             return sprite;
         }
