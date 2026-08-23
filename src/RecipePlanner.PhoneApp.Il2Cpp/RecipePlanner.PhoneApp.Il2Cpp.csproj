@@ -1,0 +1,77 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The same phone app, compiled for the default (IL2CPP) branch.
+
+    Not a fork: it compiles the exact sources of RecipePlanner.PhoneApp, with IL2CPP defined and the
+    references pointed at MelonLoader's Il2Cpp proxy assemblies. There is deliberately no second
+    copy of any .cs file, because two copies of two thousand lines of layout code would diverge
+    within a week and the divergence would be invisible until a player on one branch reported
+    something the other branch could not reproduce.
+
+    Everything that actually differs between the branches lives behind #if IL2CPP in four places —
+    see UiInterop and docs/08-IL2CPP-PLAN.md.
+
+    Both DLLs ship. PhoneAppLoader picks the one matching the running branch by filename, which is
+    why neither assembly is ever linked by the mod itself: whichever is wrong for this machine must
+    be able to sit unloaded next to the right one without doing any harm.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>RecipePlanner.PhoneApp.Il2Cpp</AssemblyName>
+    <RootNamespace>RecipePlanner.PhoneApp</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>$(NoWarn);CS1701;CS1702;MSB3277;CS0436</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Schedule I</GameDir>
+    <Il2CppDir>$(GameDir)\MelonLoader\Il2CppAssemblies</Il2CppDir>
+    <MelonNet6>$(GameDir)\MelonLoader\net6</MelonNet6>
+    <HasProxies Condition="Exists('$(Il2CppDir)\Assembly-CSharp.dll')">true</HasProxies>
+    <PhoneAppDir>..\RecipePlanner.PhoneApp</PhoneAppDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RecipePlanner.Core\RecipePlanner.Core.csproj" />
+    <ProjectReference Include="..\RecipePlanner.Game\RecipePlanner.Game.csproj" />
+    <ProjectReference Include="..\RecipePlanner.UI\RecipePlanner.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(HasProxies)' == 'true'">
+    <Compile Include="$(PhoneAppDir)\**\*.cs"
+             Exclude="$(PhoneAppDir)\obj\**\*.cs;$(PhoneAppDir)\bin\**\*.cs" />
+
+    <Reference Include="Assembly-CSharp"><HintPath>$(Il2CppDir)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppScheduleOne.Core"><HintPath>$(Il2CppDir)\Il2CppScheduleOne.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(Il2CppDir)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Il2CppDir)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(Il2CppDir)\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>$(Il2CppDir)\UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(Il2CppDir)\UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.TextMeshPro"><HintPath>$(Il2CppDir)\Unity.TextMeshPro.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2Cppmscorlib"><HintPath>$(Il2CppDir)\Il2Cppmscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppSystem"><HintPath>$(Il2CppDir)\Il2CppSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>$(MelonNet6)\Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Common" Condition="Exists('$(MelonNet6)\Il2CppInterop.Common.dll')">
+      <HintPath>$(MelonNet6)\Il2CppInterop.Common.dll</HintPath><Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(HasProxies)' == 'true'">
+    <DefineConstants>$(DefineConstants);IL2CPP</DefineConstants>
+  </PropertyGroup>
+
+  <!--
+    Without the proxies this builds as an empty assembly rather than failing, matching what the
+    Mono project does when Managed is missing. A build machine that has neither branch installed
+    still produces a complete, if UI-less, mod.
+  -->
+  <Target Name="ReportNoProxies" BeforeTargets="Build" Condition="'$(HasProxies)' != 'true'">
+    <Warning Text="No Il2Cpp proxy assemblies under '$(Il2CppDir)'. MelonLoader generates them on first launch on the default branch. Built as an empty stub, so this package will have no Cookbook app on IL2CPP." />
+  </Target>
+
+</Project>

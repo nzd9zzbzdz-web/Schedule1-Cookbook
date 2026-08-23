@@ -5,6 +5,7 @@
     <Project Path="src/RecipePlanner.UI/RecipePlanner.UI.csproj" />
     <Project Path="src/RecipePlanner.Mod/RecipePlanner.Mod.csproj" />
     <Project Path="src/RecipePlanner.PhoneApp/RecipePlanner.PhoneApp.csproj" />
+    <Project Path="src/RecipePlanner.PhoneApp.Il2Cpp/RecipePlanner.PhoneApp.Il2Cpp.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/RecipePlanner.Core.Tests/RecipePlanner.Core.Tests.csproj" />

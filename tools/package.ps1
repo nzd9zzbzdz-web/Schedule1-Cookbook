@@ -11,6 +11,7 @@
           RecipePlanner.Game.dll
           RecipePlanner.UI.dll
           RecipePlanner.PhoneApp.dll
+          RecipePlanner.PhoneApp.Il2Cpp.dll
         README.txt
         LICENSE
 
@@ -70,7 +71,7 @@ $required = @(
     'RecipePlanner.Game.dll'
     'RecipePlanner.UI.dll'
 )
-$optional = @('RecipePlanner.PhoneApp.dll')
+$optional = @('RecipePlanner.PhoneApp.dll', 'RecipePlanner.PhoneApp.Il2Cpp.dll')
 
 $missing = $required | Where-Object { -not (Test-Path (Join-Path $dist $_)) }
 if ($missing) { throw "dist\ is missing required files: $($missing -join ', '). Did the build stage?" }

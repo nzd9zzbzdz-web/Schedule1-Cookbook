@@ -18,7 +18,15 @@ namespace RecipePlanner.Mod
     /// </summary>
     internal sealed class PhoneAppLoader
     {
-        private const string AssemblyFile = "RecipePlanner.PhoneApp.dll";
+        /// <summary>
+        /// The two UI builds that ship side by side, one per Steam branch.
+        ///
+        /// Both are the same sources; only their references differ. Picking by filename is
+        /// what lets a single download work on either branch — the wrong one simply sits
+        /// unloaded, which it can do safely precisely because nothing links it.
+        /// </summary>
+        private const string MonoAssembly = "RecipePlanner.PhoneApp.dll";
+        private const string Il2CppAssembly = "RecipePlanner.PhoneApp.Il2Cpp.dll";
         private const string InstallerType = "RecipePlanner.PhoneApp.CookbookAppInstaller";
         private const string InstallMethod = "TryInstall";
 
@@ -31,10 +39,13 @@ namespace RecipePlanner.Mod
         private bool _resolved;
         private bool _givenUp;
         private int _failures;
+        private readonly string _assemblyFile;
 
-        public PhoneAppLoader(ILog log)
+        /// <param name="isMonoBranch">Chooses which of the two UI builds to load.</param>
+        public PhoneAppLoader(ILog log, bool isMonoBranch)
         {
             _log = log ?? NullLog.Instance;
+            _assemblyFile = isMonoBranch ? MonoAssembly : Il2CppAssembly;
         }
 
         /// <summary>
@@ -104,11 +115,11 @@ namespace RecipePlanner.Mod
                     return null;
                 }
 
-                var path = Path.Combine(here, AssemblyFile);
+                var path = Path.Combine(here, _assemblyFile);
 
                 if (!File.Exists(path))
                 {
-                    _log.Warn($"{AssemblyFile} is not next to the mod, so there will be no Cookbook " +
+                    _log.Warn($"{_assemblyFile} is not next to the mod, so there will be no Cookbook " +
                               "app. Production tracking is unaffected.");
                     return null;
                 }
@@ -116,7 +127,7 @@ namespace RecipePlanner.Mod
                 var type = Assembly.LoadFrom(path).GetType(InstallerType, throwOnError: false);
                 if (type == null)
                 {
-                    _log.Warn($"{AssemblyFile} loaded but {InstallerType} was not in it — the file is " +
+                    _log.Warn($"{_assemblyFile} loaded but {InstallerType} was not in it — the file is " +
                               "probably from a different version of the mod.");
                     return null;
                 }

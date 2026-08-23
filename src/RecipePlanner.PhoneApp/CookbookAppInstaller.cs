@@ -39,6 +39,12 @@ namespace RecipePlanner.PhoneApp
         {
             if (IsInstalled) return true;
 
+            // On IL2CPP the game's type system has to be told our components exist before one can
+            // be added. Checked first, and treated as a hard stop: building most of an app and then
+            // discovering AddComponent returned null leaves wreckage on the phone, whereas
+            // declining up front costs the player nothing they were going to get anyway.
+            if (!Il2CppTypes.EnsureRegistered()) return false;
+
             // Bind the sprite cache to the seam the data builder raises. Done here rather than in a
             // static initialiser so it is set exactly when this assembly is known to have loaded —
             // on the IL2CPP branch it never does, and the builder simply finds nothing bound.

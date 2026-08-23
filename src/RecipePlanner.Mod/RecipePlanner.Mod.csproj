@@ -70,6 +70,14 @@
                       OutputItemType="Content"
                       CopyToOutputDirectory="PreserveNewest"
                       Private="false" />
+
+    <!-- The IL2CPP build of the same UI, on identical terms. Both ship; PhoneAppLoader picks. -->
+    <ProjectReference Include="..\RecipePlanner.PhoneApp.Il2Cpp\RecipePlanner.PhoneApp.Il2Cpp.csproj"
+                      ReferenceOutputAssembly="false"
+                      SkipGetTargetFrameworkProperties="true"
+                      OutputItemType="Content"
+                      CopyToOutputDirectory="PreserveNewest"
+                      Private="false" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(HasMelonLoader)' == 'true'">
@@ -104,6 +112,7 @@
       <ModPayload Include="$(TargetDir)RecipePlanner.UI.dll" />
       <!-- Mono branch only; absent from an IL2CPP build, where the mod runs without a UI. -->
       <ModPayload Include="$(TargetDir)RecipePlanner.PhoneApp.dll" Condition="Exists('$(TargetDir)RecipePlanner.PhoneApp.dll')" />
+      <ModPayload Include="$(TargetDir)RecipePlanner.PhoneApp.Il2Cpp.dll" Condition="Exists('$(TargetDir)RecipePlanner.PhoneApp.Il2Cpp.dll')" />
       <ModPayload Include="$(TargetDir)Newtonsoft.Json.dll" Condition="Exists('$(TargetDir)Newtonsoft.Json.dll')" />
     </ItemGroup>
     <Copy SourceFiles="@(ModPayload)" DestinationFolder="$(MSBuildProjectDirectory)\..\..\dist" />

@@ -10,7 +10,7 @@ using RecipePlanner.UI;
 // mod managers, so they must match the Nexus page exactly. "Cookbook" rather than "Recipe Planner":
 // planning and optimisation are not built yet, and a name that promises them invites the complaint.
 // See docs/05-RELEASE-ROADMAP.md R2.
-[assembly: MelonInfo(typeof(RecipePlanner.Mod.RecipePlannerMod), "Schedule I Cookbook", "1.0.0", "Sean")]
+[assembly: MelonInfo(typeof(RecipePlanner.Mod.RecipePlannerMod), "Schedule I Cookbook", "1.1.0", "Sean")]
 [assembly: MelonGame("TVGS", "Schedule I")]
 
 namespace RecipePlanner.Mod
@@ -98,25 +98,28 @@ namespace RecipePlanner.Mod
                 // Loaded by name, never linked: see PhoneAppLoader. Tracking above is already live
                 // at this point, so nothing the UI does can take it down.
                 //
-                // Left null on IL2CPP rather than left to fail: the loader would only discover the
-                // same thing the hard way, and an expected configuration should not surface as a
-                // warning the player has to interpret.
-                if (SymbolGuard.IsMonoBranch(gameAssemblies))
+                // Two UI builds ship, one per branch, and the branch decides which filename gets
+                // loaded. Neither is referenced by this assembly, which is what lets the wrong one
+                // sit harmlessly unloaded next to the right one.
+                var isMono = SymbolGuard.IsMonoBranch(gameAssemblies);
+                _phoneApp = new PhoneAppLoader(log, isMono);
+
+                if (isMono)
                 {
-                    _phoneApp = new PhoneAppLoader(log);
-                    LoggerInstance.Msg("Mono branch detected — the Cookbook app will appear on the phone.");
+                    LoggerInstance.Msg("Mono ('alternate') branch — the Cookbook app will appear on the phone.");
                 }
                 else
                 {
-                    // Deliberately does NOT claim tracking works here. It very probably does — this
-                    // assembly reaches the game only by reflection and resolves the Il2Cpp proxy
-                    // names too — but "probably" is not "tested", and the mod's whole reputation
-                    // rests on not asserting things it has not verified.
-                    LoggerInstance.Warning(
-                        "IL2CPP branch detected. This mod is built and tested for the 'alternate' " +
-                        "(Mono) Steam branch. The in-game Cookbook app CANNOT run here, and nothing " +
-                        "on this branch is supported or tested. To switch: Steam > right-click " +
-                        "Schedule I > Properties > Betas > 'alternate'.");
+                    // Attempted rather than refused, which it was until 1.1. The tracking half is
+                    // verified here — all 30 hooks resolve against the Il2Cpp proxies — and the UI
+                    // is now built for this branch too. What is not yet proven on real hardware is
+                    // whether CookbookApp can be injected into the IL2CPP type system, so this says
+                    // "attempting" and lets the log report what actually happened. Claiming success
+                    // before the player has seen it would be exactly the habit this mod avoids.
+                    LoggerInstance.Msg(
+                        "Default (IL2CPP) branch — attempting the Cookbook app. Newer than the Mono " +
+                        "build and less proven; if the app does not appear, tracking still runs and " +
+                        "the log above says why.");
                 }
             }
             catch (Exception ex)
