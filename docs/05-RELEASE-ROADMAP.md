@@ -434,6 +434,7 @@ differentiator, per the notes above.
 | R14 unnamed-mix value | ✅ priced at naming, and repaired on load |
 | R15 stale dedup keys | ✅ seeding now replaces rather than accumulates |
 | R16 renamed organisation | ✅ existing history adopted rather than orphaned |
+| R17 hidden UI | ✅ stats screen and row figures behind switches |
 
 Everything that could be done without launching the game is done. **Every remaining item needs a
 running game**, which is the one thing this could not do.
@@ -824,3 +825,26 @@ directory check, and an unreadable profile is skipped rather than aborting the s
 
 7 tests, including that a different seed, a different creation date and a different account are all
 correctly refused — merging two playthroughs would be a worse bug than the one being prevented.
+
+---
+
+## R17 — Statistics screen and row figures switched off ✅
+
+Author's decision after seeing them running: the Statistics screen and the price / units / value on
+each cookbook row are hidden for 1.0, with the intent of bringing them back later.
+
+**Hidden rather than deleted**, via [`UiFeatures`](../src/RecipePlanner.PhoneApp/UiFeatures.cs).
+Flipping either switch to `true` is the entire change. Deleting them would mean rebuilding from
+scratch later and would take the reasoning in their comments with it — and the code stays compiled
+and covered by tests, so it cannot rot quietly while out of sight.
+
+Two details worth keeping:
+
+- The row's price and units are **built and left inactive** rather than skipped. A row that never
+  created them would need every later reference guarded, which is how null-reference bugs get in.
+- The addictiveness meter **slides left into the freed space**, so the row reads as designed for
+  what it shows rather than as one with a hole in it. Same for the strain strip, which takes back
+  the width of the removed Statistics button.
+
+The figures are still available: `cookbook.md` carries the full totals, value and profit, and the
+Nexus copy now points at it instead of the screen.

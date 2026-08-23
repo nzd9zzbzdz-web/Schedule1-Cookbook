@@ -128,18 +128,13 @@ This mod keeps the record for you, automatically.
 mixing-completion events, so every batch is captured as it happens — including the ones your
 employees cook while you are somewhere else.
 
-### Three screens on your phone
+### Two screens on your phone
 
 **📖 Cookbook** — every recipe you have discovered, grouped by strain, each showing the full
 ingredient chain that built it. Hover a recipe to see all its effects. Sort seven ways — name, units
 made, value, most recent, chain length, addictiveness — filter to favourites or to what you have
 actually cooked, and hide the ones you are done with. Hiding is display only: the recipe stays in
 the game and keeps its history.
-
-**📊 Statistics** — units, batches, value, cost and profit for the character you are playing. A
-breakdown by drug type, your most-produced products, your most-used ingredients, and your records.
-Cooks done by your employees are tracked but kept out of your personal totals, and the screen says
-how many so a lower number than you expected never looks like a miscount.
 
 **🌿 Mix Guide** — what every ingredient actually does. Pick an ingredient and see the effect it
 adds and what it turns each existing effect into. Or pick an effect you want and see every route to
@@ -154,7 +149,7 @@ mix maps per game, so a static chart is simply wrong for some players. This one 
   placed under its strain with its full ancestry — no saving or reloading needed.
 - **Nothing is ever logged by hand.** The mod hooks the game's own mixing-completion events.
 - **A readable copy outside the game.** Everything is also written to a `cookbook.md` you can open
-  in any editor, keep, or share.
+  in any editor, keep, or share — recipes, chains, and your lifetime totals, value and profit.
 
 ### It will not touch your save
 
@@ -260,9 +255,8 @@ rough order of how much work each one does for you:
    immediately obvious what it means without reading a word.
 2. **The Mix Guide, on the "By effect" tab, with a real effect selected** — the routes list is the
    answer to the question players actually arrive with.
-3. **The Statistics screen**, scrolled to show the by-type bars.
-4. **The cookbook at ALL STRAINS**, for the sense of scale.
-5. **The effects card open over a row** — it shows the hover interaction, which is otherwise
+3. **The cookbook at ALL STRAINS**, for the sense of scale.
+4. **The effects card open over a row** — it shows the hover interaction, which is otherwise
    invisible in a still.
 6. Optional: the MelonLoader console showing a `Production Detected` block. It is proof of the
    automatic tracking, which is the hardest claim to believe from text alone.
@@ -280,8 +274,6 @@ First public release.
 
 - Cookbook — recipes grouped by strain, full ingredient chains, effects on hover, 7 sort orders,
   filters and hiding
-- Statistics — lifetime totals, value and profit, breakdown by drug type, top products and
-  ingredients, records, and separately-tracked employee production
 - Mix Guide — what each ingredient adds and converts, and every route to a given effect, read from
   your own save rather than a fixed table
 

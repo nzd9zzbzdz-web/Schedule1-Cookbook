@@ -1013,6 +1013,9 @@ namespace RecipePlanner.PhoneApp
                 // out on the far edge. Its colour is CONSTANT: an earlier version tinted this line
                 // by addictiveness, but the line carried the price too, so money appeared to change
                 // colour for a reason that had nothing to do with money.
+                // Built either way so Bind has something to write to unconditionally, and simply
+                // left inactive when switched off — a row that skips creating them would need every
+                // later reference guarded, which is how null-reference bugs get in.
                 view._value = CreateText(view.Root, "Value", "", font, PriceFontSize, FontStyle.Bold);
                 view._value.color = PriceText;
                 view._value.alignment = TextAnchor.MiddleRight;
@@ -1024,6 +1027,12 @@ namespace RecipePlanner.PhoneApp
                 view._stats.alignment = TextAnchor.MiddleRight;
                 Anchor(view._stats.rectTransform, new Vector2(0.44f, 0f), new Vector2(0.62f, 0.48f),
                        Vector2.zero, new Vector2(-6f, 0f));
+
+                if (!UiFeatures.RowValueAndUnits)
+                {
+                    view._value.gameObject.SetActive(false);
+                    view._stats.gameObject.SetActive(false);
+                }
 
                 view.CreateAddictionMeter(font);
 
@@ -1055,13 +1064,19 @@ namespace RecipePlanner.PhoneApp
             {
                 // Percentage and track share one line rather than stacking. Stacked, the pair read
                 // as two separate things at a glance; side by side they read as one measurement.
+                // Slides left into the space the price and units would have taken when those are
+                // switched off, so the row reads as designed for what it shows rather than as one
+                // with a hole in it.
+                var meterLeft = UiFeatures.RowValueAndUnits ? 0.62f : 0.46f;
+                var trackLeft = UiFeatures.RowValueAndUnits ? 0.74f : 0.58f;
+
                 _addiction = CreateText(Root, "Addiction", "", font, StatFontSize - 1, FontStyle.Bold);
                 _addiction.alignment = TextAnchor.MiddleRight;
-                Anchor(_addiction.rectTransform, new Vector2(0.62f, 0.5f), new Vector2(0.74f, 0.5f),
+                Anchor(_addiction.rectTransform, new Vector2(meterLeft, 0.5f), new Vector2(trackLeft, 0.5f),
                        new Vector2(0f, -12f), new Vector2(-8f, 12f));
 
                 var track = CreateChild(Root, "AddictionTrack");
-                track.anchorMin = new Vector2(0.74f, 0.5f);
+                track.anchorMin = new Vector2(trackLeft, 0.5f);
                 track.anchorMax = new Vector2(1f, 0.5f);
                 track.offsetMin = new Vector2(0f, -4f);
                 track.offsetMax = new Vector2(-48f, 4f);
@@ -1609,7 +1624,14 @@ namespace RecipePlanner.PhoneApp
         // than another toolbar control — they sit beside 72px strain tiles, and anything much
         // narrower reads as one of them.
         private const float GuideButtonWidth = 104f;
-        private const float DestinationsWidth = GuideButtonWidth * 2f + 6f;
+
+        /// <summary>
+        /// How much of the strain strip the destination buttons take. Narrows to one button when
+        /// the Statistics screen is switched off, so the strip gets the space back rather than
+        /// leaving a gap where a button used to be.
+        /// </summary>
+        private static float DestinationsWidth =>
+            UiFeatures.StatisticsScreen ? GuideButtonWidth * 2f + 6f : GuideButtonWidth;
 
         private MixGuideScreen _mixGuide;
         private StatsScreen _stats;
@@ -1623,13 +1645,20 @@ namespace RecipePlanner.PhoneApp
         {
             // Rightmost first, then leftward — offsets are measured from the right edge, so laying
             // them out in that order keeps the arithmetic obvious.
-            Destination(font, "StatsButton", "STATS", UiSkin.BarChart, -8f, () =>
-            {
-                if (_stats == null) _stats = StatsScreen.CreateInto(_root, ResolveFont(_root));
-                _stats.Open(_model);
-            });
+            var guideRight = -8f;
 
-            Destination(font, "GuideButton", "MIX\nGUIDE", UiSkin.PotLeaf, -GuideButtonWidth - 14f, () =>
+            if (UiFeatures.StatisticsScreen)
+            {
+                Destination(font, "StatsButton", "STATS", UiSkin.BarChart, -8f, () =>
+                {
+                    if (_stats == null) _stats = StatsScreen.CreateInto(_root, ResolveFont(_root));
+                    _stats.Open(_model);
+                });
+
+                guideRight = -GuideButtonWidth - 14f;
+            }
+
+            Destination(font, "GuideButton", "MIX\nGUIDE", UiSkin.PotLeaf, guideRight, () =>
             {
                 if (_mixGuide == null) _mixGuide = MixGuideScreen.CreateInto(_root, ResolveFont(_root));
                 _mixGuide.Open();
