@@ -222,5 +222,32 @@ namespace RecipePlanner.Game.Binding
                     yield return asm;
             }
         }
+
+        /// <summary>
+        /// True on the Mono ("alternate") Steam branch, where the game ships a real
+        /// <c>Assembly-CSharp</c>. False on the default IL2CPP branch, where MelonLoader instead
+        /// generates <c>Il2CppScheduleOne.*</c> proxies.
+        ///
+        /// Only the phone UI cares: it links Assembly-CSharp directly and therefore cannot load at
+        /// all under IL2CPP. Tracking is reflection-based and runs identically on both, so this
+        /// must never be used to gate anything other than the UI.
+        ///
+        /// Detection is by assembly name rather than by probing for a type, because a type probe
+        /// cannot distinguish "wrong branch" from "hook table went stale" — and those two want
+        /// very different messages.
+        /// </summary>
+        public static bool IsMonoBranch(IEnumerable<Assembly> gameAssemblies)
+        {
+            foreach (var asm in gameAssemblies ?? Enumerable.Empty<Assembly>())
+            {
+                string name;
+                try { name = asm.GetName().Name; }
+                catch { continue; }
+
+                if (name.StartsWith("Assembly-CSharp", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
     }
 }

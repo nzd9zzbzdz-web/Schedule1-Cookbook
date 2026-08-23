@@ -2,11 +2,14 @@
 
   <PropertyGroup>
     <!--
-      netstandard2.1 to match the game: Assembly-CSharp targets 2.1 and loads on this runtime, and
-      .NET 6 implements 2.1 as well. Raised from 2.0 when the phone app arrived, since referencing
-      the game assemblies forces 2.1.
+      netstandard2.0, which loads on BOTH MelonLoader hosts: .NET Framework (Mono branch) and
+      .NET 6 (IL2CPP).
+
+      This was raised to 2.1 when the phone app arrived, because referencing the game assemblies
+      forced it. Now that the UI is loaded by name instead of referenced (see PhoneAppLoader), the
+      constraint is gone and the wider target comes back.
     -->
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <AssemblyName>RecipePlanner</AssemblyName>
@@ -17,8 +20,12 @@
 
   <!--
     This project references only MelonLoader and Harmony; the game itself is reached by reflection
-    (see RecipePlanner.Game/Binding). RecipePlanner.PhoneApp is the one piece that links
-    Assembly-CSharp directly, and therefore the one Mono-only piece.
+    (see RecipePlanner.Game/Binding).
+
+    RecipePlanner.PhoneApp is deliberately NOT referenced. It links Assembly-CSharp directly and is
+    therefore the one Mono-only piece, so naming it here would bake that dependency into
+    RecipePlanner.dll and kill the whole mod on the IL2CPP branch. PhoneAppLoader loads it by name
+    at runtime instead. RecipePlanner.UI holds the parts both sides need.
 
     Override GameDir if Steam installed elsewhere:
         dotnet build -p:GameDir="D:\Steam\steamapps\common\Schedule I"
@@ -47,7 +54,22 @@
   <ItemGroup>
     <ProjectReference Include="..\RecipePlanner.Core\RecipePlanner.Core.csproj" />
     <ProjectReference Include="..\RecipePlanner.Game\RecipePlanner.Game.csproj" />
-    <ProjectReference Include="..\RecipePlanner.PhoneApp\RecipePlanner.PhoneApp.csproj" />
+    <ProjectReference Include="..\RecipePlanner.UI\RecipePlanner.UI.csproj" />
+
+    <!--
+      Built and staged, but NOT referenced. ReferenceOutputAssembly="false" keeps PhoneApp out of
+      the compiler's sight — and so out of RecipePlanner.dll's metadata, which is the whole point of
+      R1 — while OutputItemType/CopyToOutputDirectory still drop its DLL next to ours so one
+      `dotnet build` produces a complete payload and PhoneAppLoader can find it at runtime.
+
+      If this ever gains ReferenceOutputAssembly="true", the IL2CPP branch breaks again.
+    -->
+    <ProjectReference Include="..\RecipePlanner.PhoneApp\RecipePlanner.PhoneApp.csproj"
+                      ReferenceOutputAssembly="false"
+                      SkipGetTargetFrameworkProperties="true"
+                      OutputItemType="Content"
+                      CopyToOutputDirectory="PreserveNewest"
+                      Private="false" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(HasMelonLoader)' == 'true'">
@@ -79,6 +101,8 @@
       <ModPayload Include="$(TargetDir)RecipePlanner.dll" />
       <ModPayload Include="$(TargetDir)RecipePlanner.Core.dll" />
       <ModPayload Include="$(TargetDir)RecipePlanner.Game.dll" />
+      <ModPayload Include="$(TargetDir)RecipePlanner.UI.dll" />
+      <!-- Mono branch only; absent from an IL2CPP build, where the mod runs without a UI. -->
       <ModPayload Include="$(TargetDir)RecipePlanner.PhoneApp.dll" Condition="Exists('$(TargetDir)RecipePlanner.PhoneApp.dll')" />
       <ModPayload Include="$(TargetDir)Newtonsoft.Json.dll" Condition="Exists('$(TargetDir)Newtonsoft.Json.dll')" />
     </ItemGroup>

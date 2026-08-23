@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/RecipePlanner.Core/RecipePlanner.Core.csproj" />
     <Project Path="src/RecipePlanner.Game/RecipePlanner.Game.csproj" />
+    <Project Path="src/RecipePlanner.UI/RecipePlanner.UI.csproj" />
     <Project Path="src/RecipePlanner.Mod/RecipePlanner.Mod.csproj" />
     <Project Path="src/RecipePlanner.PhoneApp/RecipePlanner.PhoneApp.csproj" />
   </Folder>

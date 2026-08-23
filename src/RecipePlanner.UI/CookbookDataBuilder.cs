@@ -5,7 +5,7 @@ using RecipePlanner.Core.Recipes;
 using RecipePlanner.Core.Stats;
 using RecipePlanner.Game.Binding;
 
-namespace RecipePlanner.PhoneApp
+namespace RecipePlanner.UI
 {
     /// <summary>
     /// Turns the live game catalogue plus recorded statistics into the view model the screen draws.
@@ -41,7 +41,10 @@ namespace RecipePlanner.PhoneApp
 
             // Product ids are player-generated and only unique within a save, so a cached sprite
             // from the previous character would show against a different product with the same id.
-            IconSource.Clear();
+            // Routed through the seam rather than calling IconSource directly: that type is Unity's
+            // and lives in the Mono-only assembly. See RecipePlannerUI.CacheInvalidated.
+            try { RecipePlannerUI.CacheInvalidated?.Invoke(); }
+            catch (Exception ex) { _log.Warn("Icon cache invalidation failed: " + ex.Message); }
         }
 
         public CookbookViewModel Build(

@@ -29,6 +29,7 @@
   <ItemGroup>
     <ProjectReference Include="..\RecipePlanner.Core\RecipePlanner.Core.csproj" />
     <ProjectReference Include="..\RecipePlanner.Game\RecipePlanner.Game.csproj" />
+    <ProjectReference Include="..\RecipePlanner.UI\RecipePlanner.UI.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(HasManaged)' == 'true'">

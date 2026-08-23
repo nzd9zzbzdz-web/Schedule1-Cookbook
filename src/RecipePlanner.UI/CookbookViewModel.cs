@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using RecipePlanner.Core.Recipes;
 using RecipePlanner.Core.Stats;
 
-namespace RecipePlanner.PhoneApp
+namespace RecipePlanner.UI
 {
     /// <summary>
     /// Everything the app draws, already computed. The screen does layout only — no queries, no

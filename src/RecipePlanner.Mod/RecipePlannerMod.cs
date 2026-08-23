@@ -4,7 +4,7 @@ using System.Reflection;
 using HarmonyLib;
 using MelonLoader;
 using RecipePlanner.Game.Binding;
-using RecipePlanner.PhoneApp;
+using RecipePlanner.UI;
 
 [assembly: MelonInfo(typeof(RecipePlanner.Mod.RecipePlannerMod), "Recipe Planner", "0.1.0", "Schedule1RecipePlanner")]
 [assembly: MelonGame("TVGS", "Schedule I")]
@@ -26,6 +26,7 @@ namespace RecipePlanner.Mod
         private HarmonyLib.Harmony _harmony;
         private ModHost _host;
         private SaveLifecycleWatcher _watcher;
+        private PhoneAppLoader _phoneApp;
         private DateTime _lastPoll = DateTime.MinValue;
         private bool _appInstalled;
 
@@ -58,8 +59,10 @@ namespace RecipePlanner.Mod
 
             if (!report.SafeToTrack)
             {
-                LoggerInstance.Error("Production tracking DISABLED. The planner UI will still work; " +
-                                     "statistics will not be recorded until the hook table is updated.");
+                LoggerInstance.Error(
+                    "Production tracking DISABLED — the game's symbols no longer match the hook " +
+                    "table, most likely after an update. Nothing will be recorded until the mod is " +
+                    "updated. Recording wrong numbers would be worse than recording none.");
                 return;
             }
 
@@ -85,6 +88,25 @@ namespace RecipePlanner.Mod
 
                 TrackingEnabled = true;
                 LoggerInstance.Msg("Production tracking ENABLED — waiting for a save to load.");
+
+                // Loaded by name, never linked: see PhoneAppLoader. Tracking above is already live
+                // at this point, so nothing the UI does can take it down.
+                //
+                // Left null on IL2CPP rather than left to fail: the loader would only discover the
+                // same thing the hard way, and an expected configuration should not surface as a
+                // warning the player has to interpret.
+                if (SymbolGuard.IsMonoBranch(gameAssemblies))
+                {
+                    _phoneApp = new PhoneAppLoader(log);
+                    LoggerInstance.Msg("Mono branch detected — the Cookbook app will appear on the phone.");
+                }
+                else
+                {
+                    LoggerInstance.Msg(
+                        "IL2CPP branch detected — tracking, history and statistics all work normally, " +
+                        "but the in-game Cookbook app is Mono-only and will not appear. Switch " +
+                        "Schedule I to the 'alternate' Steam branch to get it.");
+                }
             }
             catch (Exception ex)
             {
@@ -110,9 +132,10 @@ namespace RecipePlanner.Mod
             try { _watcher.Poll(); }
             catch (Exception ex) { LoggerInstance.Error("Save watcher failed: " + ex.Message); }
 
-            // The phone only exists once a save is in; retry each tick until it takes.
-            if (!_appInstalled && _host != null && _host.IsGameLoaded)
-                _appInstalled = CookbookAppInstaller.TryInstall();
+            // The phone only exists once a save is in; retry each tick until it takes. Null on the
+            // IL2CPP branch, where there is no UI to install.
+            if (!_appInstalled && _phoneApp != null && _host != null && _host.IsGameLoaded)
+                _appInstalled = _phoneApp.TryInstall();
         }
 
         public override void OnDeinitializeMelon()

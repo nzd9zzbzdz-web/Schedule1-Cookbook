@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using ScheduleOne.UI;
+using RecipePlanner.UI;
 
 namespace RecipePlanner.PhoneApp
 {
@@ -139,20 +140,5 @@ namespace RecipePlanner.PhoneApp
 
             for (var i = 0; i < t.childCount; i++) Walk(t.GetChild(i), depth + 1, sb, maxDepth);
         }
-    }
-
-    /// <summary>Seams so this assembly needs no knowledge of MelonLoader or the mod host.</summary>
-    public static class RecipePlannerUI
-    {
-        public static RecipePlanner.Game.Binding.ILog Log { get; set; }
-
-        /// <summary>Supplies what the screen renders. Set by the mod at startup.</summary>
-        public static Func<CookbookViewModel> DataSource { get; set; }
-
-        /// <summary>
-        /// Hides or restores a recipe in the cookbook view. Display only — the recipe stays in the
-        /// game, and its production history and statistics are untouched.
-        /// </summary>
-        public static Action<string, bool> SetRecipeHidden { get; set; }
     }
 }

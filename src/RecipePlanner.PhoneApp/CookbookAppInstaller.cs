@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using ScheduleOne.UI;
 using ScheduleOne.UI.Phone.ProductManagerApp;
+using RecipePlanner.UI;
 
 namespace RecipePlanner.PhoneApp
 {
@@ -32,6 +33,11 @@ namespace RecipePlanner.PhoneApp
         public static bool TryInstall()
         {
             if (IsInstalled) return true;
+
+            // Bind the sprite cache to the seam the data builder raises. Done here rather than in a
+            // static initialiser so it is set exactly when this assembly is known to have loaded —
+            // on the IL2CPP branch it never does, and the builder simply finds nothing bound.
+            RecipePlannerUI.CacheInvalidated = IconSource.Clear;
 
             try
             {

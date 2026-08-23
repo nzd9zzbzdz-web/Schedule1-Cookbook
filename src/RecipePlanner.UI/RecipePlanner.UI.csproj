@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      netstandard2.0 loads on BOTH MelonLoader hosts: .NET Framework (Mono branch) and .NET 6
+      (IL2CPP). That is the entire point of this assembly.
+
+      It holds the parts of the cookbook that the mod host needs but that do NOT touch Unity or
+      Assembly-CSharp: the view model, the builder that fills it, and the delegate seam the UI
+      binds to. RecipePlanner.PhoneApp keeps everything that draws, and stays Mono-only.
+
+      Splitting these out is what lets RecipePlanner.Mod drop its reference to PhoneApp entirely,
+      so the mod still loads — and still tracks production — on the default IL2CPP branch.
+      See docs/05-RELEASE-ROADMAP.md R1.
+    -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>RecipePlanner.UI</AssemblyName>
+    <RootNamespace>RecipePlanner.UI</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RecipePlanner.Core\RecipePlanner.Core.csproj" />
+    <ProjectReference Include="..\RecipePlanner.Game\RecipePlanner.Game.csproj" />
+  </ItemGroup>
+
+</Project>

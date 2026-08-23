@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using RecipePlanner.Core.Production;
 using RecipePlanner.Core.Tests.Fakes;
 using RecipePlanner.Game.Binding;
@@ -129,6 +130,45 @@ namespace RecipePlanner.Core.Tests
             var picked = SymbolGuard.GameAssemblies(new[] { typeof(GameStation).Assembly, typeof(string).Assembly }).ToList();
             Assert.DoesNotContain(typeof(string).Assembly, picked);
         }
+
+        /// <summary>
+        /// The branch check gates the phone UI, which cannot load at all without a real
+        /// Assembly-CSharp. Getting it backwards would either hide the app from players who can run
+        /// it, or take the whole mod down for players who cannot — the bug this check exists to stop.
+        /// </summary>
+        [Fact]
+        public void Mono_branch_is_recognised_by_a_real_Assembly_CSharp()
+        {
+            Assert.True(SymbolGuard.IsMonoBranch(new[]
+            {
+                NamedAssembly("Assembly-CSharp"),
+                NamedAssembly("Assembly-CSharp-firstpass"),
+            }));
+        }
+
+        [Fact]
+        public void Il2Cpp_proxies_are_not_mistaken_for_the_Mono_branch()
+        {
+            // What MelonLoader generates on the default branch: the game's types are all there,
+            // under proxy assemblies, and Assembly-CSharp is nowhere.
+            Assert.False(SymbolGuard.IsMonoBranch(new[]
+            {
+                NamedAssembly("Il2CppScheduleOne.Runtime"),
+                NamedAssembly("Il2CppScheduleOne.Core"),
+                NamedAssembly("Il2Cppmscorlib"),
+            }));
+        }
+
+        [Fact]
+        public void No_game_assemblies_at_all_is_not_the_Mono_branch()
+        {
+            Assert.False(SymbolGuard.IsMonoBranch(new Assembly[0]));
+            Assert.False(SymbolGuard.IsMonoBranch(null));
+        }
+
+        /// <summary>An assembly that exists only to carry a name, which is all the check reads.</summary>
+        private static Assembly NamedAssembly(string name) =>
+            AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(name), AssemblyBuilderAccess.Run);
 
         [Fact]
         public void The_shipped_hook_table_is_internally_coherent()

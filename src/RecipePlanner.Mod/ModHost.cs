@@ -10,7 +10,7 @@ using RecipePlanner.Core.Recipes;
 using RecipePlanner.Core.Stats;
 using RecipePlanner.Core.Storage;
 using RecipePlanner.Game.Binding;
-using RecipePlanner.PhoneApp;
+using RecipePlanner.UI;
 
 namespace RecipePlanner.Mod
 {

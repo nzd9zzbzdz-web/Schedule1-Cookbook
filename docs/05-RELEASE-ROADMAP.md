@@ -9,7 +9,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done
 
 ---
 
-## R0 — Get the repo under version control ⬜
+## R0 — Get the repo under version control ✅
 
 `master` currently has **zero commits**. Everything in the working tree is untracked, there is no
 rollback, and there is no way to tag a release. Nothing else in this roadmap should start first,
@@ -23,9 +23,19 @@ because every step after this one wants a checkpoint to fall back to.
 **Exit test:** `git log` shows a root commit; `git status` is clean; a fresh `git clone` plus
 `dotnet test` passes.
 
+**Done.** Pushed to <https://github.com/nzd9zzbzdz-web/Schedule1-Cookbook> as `main`. `dist/` is
+gitignored per the recommendation above.
+
+One thing was scrubbed on the way out: the tests and [03-DATA-MODEL.md](03-DATA-MODEL.md) contained
+two **real** SteamID64s — one almost certainly yours, one apparently a co-op partner's from
+multiplayer testing. A SteamID64 resolves straight to a public Steam profile, and public git history
+is permanent, so both were replaced with synthetic ids below the valid range
+(`76561190000000001` / `...002`). The tests treat them as opaque strings and still pass.
+**Keep it that way** — never commit a real one.
+
 ---
 
-## R1 — Survive the default (IL2CPP) branch 🔴 **BLOCKER** ⬜
+## R1 — Survive the default (IL2CPP) branch 🟡 code done, needs a live IL2CPP run
 
 ### The problem
 
@@ -46,7 +56,18 @@ strips all its sources (`Compile Remove="**/*.cs"`), so `RecipePlanner.Mod` no l
 
 ### The fix — split the assembly
 
-The dependency audit says this is a move, not a rewrite. Current PhoneApp sources by dependency:
+**Implemented.** The new assembly is called **`RecipePlanner.UI`**, not `RecipePlanner.Cookbook` as
+first planned: `RecipePlanner.Core.Recipes` already exports a class named `Cookbook`, and a
+namespace of the same name shadowed it at every call site (`Cookbook.Compose` stopped resolving).
+
+The plan below was also very slightly wrong about the dependency split, in a way worth recording:
+`CookbookDataBuilder` called `IconSource.Clear()`. `IconSource` is a Unity type in the *same
+namespace*, so it needed no `using` and did not show up in a per-file import audit — only the
+compiler found it. That call is now routed through `RecipePlannerUI.CacheInvalidated`, an `Action`
+the phone app binds to `IconSource.Clear` when it installs. Behaviour is unchanged; the dependency
+is gone. **Lesson: a `using`-based dependency audit misses same-namespace types.**
+
+Current PhoneApp sources by dependency:
 
 | File | Needs the game? |
 |---|---|
@@ -77,6 +98,33 @@ loads, `Symbol check PASSED`, `Production tracking ENABLED`, one cooked batch pr
 `Production Detected` line, and the log states plainly that the cookbook app is Mono-only. No
 unhandled exception anywhere in `MelonLoader/Latest.log`. Confirm `RecipePlanner.dll`'s assembly
 references no longer include `RecipePlanner.PhoneApp`.
+
+### What is verified so far
+
+The **static** half of the exit test passes:
+
+| Check | Result |
+|---|---|
+| `RecipePlanner.dll` references | `Core`, `Game`, `UI`, MelonLoader, 0Harmony — **no `PhoneApp`** |
+| `RecipePlanner.UI.dll` references | `netstandard` only — no Unity, no `ScheduleOne`, no `Assembly-CSharp` |
+| `RecipePlanner.PhoneApp.dll` | still carries every game reference, now quarantined behind the loader |
+| `dotnet test` | 211 passing (208 + 3 new branch-detection tests) |
+| `dist/` payload | `RecipePlanner.dll`, `Core`, `Game`, **`UI`**, `PhoneApp` |
+
+Bonus: with the game references gone, `RecipePlanner.Mod` dropped from `netstandard2.1` back to
+**`netstandard2.0`**, which is the wider of the two targets.
+
+### Still outstanding
+
+The **live** half. Everything above is static analysis — it proves the mod can no longer fail *the
+way it used to*, not that it runs. Switch Steam to the default branch and confirm the log, the
+`IL2CPP branch detected` line, and one clean `Production Detected`.
+
+Do **not** skip re-testing the Mono branch. The app installs through a new path now, and a
+regression there would be invisible to every check in the table above. `PhoneAppLoader` resolves its
+own folder via `Assembly.Location` with a `CodeBase` fallback, because the two MelonLoader hosts
+disagree about which one works — if the Cookbook app fails to appear on Mono, that is the first
+place to look.
 
 ---
 
