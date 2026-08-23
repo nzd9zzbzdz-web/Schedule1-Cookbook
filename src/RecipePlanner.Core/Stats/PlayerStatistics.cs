@@ -185,6 +185,16 @@ namespace RecipePlanner.Core.Stats
                     s.ByIngredient[ingredient] = stat = new IngredientStat { IngredientId = ingredient };
                 stat.TimesUsed += 1;
                 stat.UnitsConsumed += e.Quantity;
+
+                // Only when the event actually carries the breakdown. It was added after the first
+                // release, so older events have none — and splitting their TotalCost across the
+                // chain would be a guess, wrong whenever the ingredients differed in price. An
+                // absent cost stays absent; the report hides the column rather than showing a
+                // fabricated one.
+                if (e.IngredientUnitCosts == null) continue;
+
+                if (e.IngredientUnitCosts.TryGetValue(ingredient, out var unitCost))
+                    stat.TotalCost += unitCost * e.Quantity;
             }
         }
 

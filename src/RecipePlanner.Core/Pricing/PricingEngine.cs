@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using RecipePlanner.Core.Production;
 
@@ -59,6 +60,13 @@ namespace RecipePlanner.Core.Pricing
             evt.EstimatedProfit = evt.TotalValue - evt.TotalCost;
         }
 
+        /// <summary>
+        /// Sums the chain, and records what each part contributed on the way past.
+        ///
+        /// The per-ingredient breakdown is captured here because this is the only place it exists:
+        /// once summed it cannot be taken apart again, and the statistics fold that would want it
+        /// runs over the event log with no price source of its own.
+        /// </summary>
         private double SumIngredientCost(ProductionEvent evt)
         {
             if (_prices == null) return 0d;
@@ -68,12 +76,29 @@ namespace RecipePlanner.Core.Pricing
                 : Single(evt.IngredientId);
 
             double total = 0d;
+            Dictionary<string, double> perIngredient = null;
+
             foreach (var ingredient in chain)
             {
                 if (string.IsNullOrWhiteSpace(ingredient)) continue;
                 double cost;
-                if (_prices.TryGetIngredientCost(ingredient, out cost)) total += cost;
+                if (!_prices.TryGetIngredientCost(ingredient, out cost)) continue;
+
+                total += cost;
+
+                // Left null when nothing could be priced, so an event with no cost data is
+                // distinguishable from one where every ingredient genuinely costs nothing.
+                if (perIngredient == null)
+                    perIngredient = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+
+                // Summed rather than assigned: a recipe may use the same ingredient twice, and each
+                // use is a real cost.
+                double existing;
+                perIngredient.TryGetValue(ingredient, out existing);
+                perIngredient[ingredient] = existing + cost;
             }
+
+            evt.IngredientUnitCosts = perIngredient;
             return total;
         }
 

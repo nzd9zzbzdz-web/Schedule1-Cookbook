@@ -130,6 +130,19 @@ namespace RecipePlanner.Core.Production
         public double UnitValue { get; set; }
         public double TotalCost { get; set; }
         public double TotalValue { get; set; }
+
+        /// <summary>
+        /// What each ingredient in the chain cost, per unit produced.
+        ///
+        /// Recorded because it cannot be recovered afterwards. <see cref="UnitCost"/> is the SUM
+        /// across the chain, so a fold over the event log can tell you a batch cost $12 but not
+        /// whether that was cheap chili or expensive motor oil — and splitting the total evenly
+        /// would be a guess that is wrong whenever ingredients differ in price, which is usually.
+        ///
+        /// Added after the fact, so events written by earlier builds simply lack it. Statistics
+        /// attribute what they have and leave the rest at zero rather than inventing a share.
+        /// </summary>
+        public Dictionary<string, double> IngredientUnitCosts { get; set; }
         public double EstimatedProfit { get; set; }
 
         public int ElapsedDays { get; set; }

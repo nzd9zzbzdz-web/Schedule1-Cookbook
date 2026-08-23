@@ -429,8 +429,8 @@ differentiator, per the notes above.
 | R9 default-branch value | ✅ `cookbook.md` confirmed written live with real data |
 | R12 session lineage | ✅ confirmed live — new mix placed under its strain, 4 levels deep, without saving |
 | R13 mixing guide | ✅ built and hook-verified; needs a live look |
-| R10 unguarded reflection | ⬜ documented, not a blocker |
-| R11 ingredient costs | ⬜ documented, not a blocker |
+| R10 unguarded reflection | ✅ 30/30 hooks, enforced by a test |
+| R11 ingredient costs | ✅ recorded at pricing time, 5 tests |
 
 Everything that could be done without launching the game is done. **Every remaining item needs a
 running game**, which is the one thing this could not do.
@@ -512,7 +512,7 @@ Two, both fixed:
 
 ---
 
-## R11 — Ingredient costs are never attributed ⬜ *(not a release blocker)*
+## R11 — Ingredient costs are never attributed ✅
 
 `IngredientStat.TotalCost` is declared, rendered by the report when non-zero, and **never populated**.
 `StatisticsService.FoldIngredients` sets `TimesUsed` and `UnitsConsumed` and nothing else, so the
@@ -533,8 +533,14 @@ no price source — a property worth keeping, because it is what makes every sta
    this project keeps deciding against.
 3. Leave it, and drop the unused field so nothing implies data that does not exist.
 
-Currently behaves as option 3 by accident — the column is hidden because it is always zero, so
-nothing wrong is displayed. That is why this is not a blocker.
+**Resolved with option 1.** `ProductionEvent.IngredientUnitCosts` records the split at pricing
+time, where it is briefly known, and the fold attributes it. `StatisticsService` stays a pure fold
+over the event log with no price source, which is the property that makes every statistic
+rebuildable.
+
+Events written before this carry no breakdown and are left unattributed rather than split evenly:
+an even split is wrong the moment two ingredients differ in price, which is nearly always. Usage
+counts are unaffected — only the money is unknown. 5 tests.
 
 ---
 
