@@ -89,12 +89,8 @@ namespace RecipePlanner.PhoneApp
             var scroll = viewport.gameObject.AddComponent<ScrollRect>();
             scroll.horizontal = false;
             scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.scrollSensitivity = 0f;
-
-            var smooth = viewport.gameObject.AddComponent<SmoothScroll>();
-            smooth.Target = scroll;
-            smooth.StepPixels = LineHeight * 3f;
-            smooth.SmoothTime = 0.16f;
+            var smooth = UiInterop.ConfigureWheel(scroll, LineHeight * 3f);
+            if (smooth != null) smooth.SmoothTime = 0.16f;
 
             _content = New(viewport, "Content");
             _content.anchorMin = new Vector2(0f, 1f);

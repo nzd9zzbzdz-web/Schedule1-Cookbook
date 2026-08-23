@@ -134,12 +134,8 @@ namespace RecipePlanner.PhoneApp
             var scroll = viewport.gameObject.AddComponent<ScrollRect>();
             scroll.horizontal = false;
             scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.scrollSensitivity = 0f;
-
-            var smooth = viewport.gameObject.AddComponent<SmoothScroll>();
-            smooth.Target = scroll;
-            smooth.StepPixels = (RowHeight + RowGap) * 3f;
-            smooth.SmoothTime = 0.16f;
+            var smooth = UiInterop.ConfigureWheel(scroll, (RowHeight + RowGap) * 3f);
+            if (smooth != null) smooth.SmoothTime = 0.16f;
 
             _listContent = New(viewport, "Content");
             _listContent.anchorMin = new Vector2(0f, 1f);
@@ -183,12 +179,8 @@ namespace RecipePlanner.PhoneApp
             var scroll = viewport.gameObject.AddComponent<ScrollRect>();
             scroll.horizontal = false;
             scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.scrollSensitivity = 0f;
-
-            var smooth = viewport.gameObject.AddComponent<SmoothScroll>();
-            smooth.Target = scroll;
-            smooth.StepPixels = DetailLineHeight * 3f;
-            smooth.SmoothTime = 0.16f;
+            var smooth = UiInterop.ConfigureWheel(scroll, DetailLineHeight * 3f);
+            if (smooth != null) smooth.SmoothTime = 0.16f;
 
             _detailContent = New(viewport, "Content");
             _detailContent.anchorMin = new Vector2(0f, 1f);

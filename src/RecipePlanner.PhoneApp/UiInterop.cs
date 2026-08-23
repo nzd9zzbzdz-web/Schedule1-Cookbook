@@ -46,6 +46,42 @@ namespace RecipePlanner.PhoneApp
             button.onClick.AddListener(ToUnityAction(action));
         }
 
+        /// <summary>
+        /// Decides which component moves a list, and configures the ScrollRect to match.
+        ///
+        /// On Mono, <see cref="SmoothScroll"/> owns the wheel and the ScrollRect's own sensitivity
+        /// is zeroed so the two do not fight — any value there reintroduces an instant per-notch
+        /// jump underneath the easing.
+        ///
+        /// On IL2CPP, SmoothScroll cannot receive input at all: Il2CppInterop emits Unity's
+        /// EventSystems handler interfaces as classes, so a MonoBehaviour cannot implement them.
+        /// Zeroing sensitivity there means nothing moves the list whatsoever.
+        ///
+        /// That combination shipped, and every screen got it wrong in the same way, because the
+        /// decision lived at four separate call sites and only one of them was fixed. It lives here
+        /// now — a screen asks for a scrollable list and gets whichever mechanism works.
+        /// </summary>
+        /// <param name="stepPixels">Content pixels per wheel notch, usually one row.</param>
+        public static SmoothScroll ConfigureWheel(ScrollRect scroll, float stepPixels)
+        {
+            if (scroll == null) return null;
+
+#if IL2CPP
+            scroll.scrollSensitivity = stepPixels;
+            scroll.inertia = true;
+            scroll.decelerationRate = 0.06f;
+            return null;
+#else
+            scroll.scrollSensitivity = 0f;
+            scroll.inertia = false;
+
+            var smooth = scroll.gameObject.AddComponent<SmoothScroll>();
+            smooth.Target = scroll;
+            smooth.StepPixels = stepPixels;
+            return smooth;
+#endif
+        }
+
         /// <summary>Runs <paramref name="action"/> whenever the scroll position changes.</summary>
         public static void OnScrollChanged(ScrollRect scroll, Action<Vector2> action)
         {
