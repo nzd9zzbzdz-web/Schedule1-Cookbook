@@ -34,6 +34,7 @@ namespace RecipePlanner.Mod
         private RecipeDiscoveryService _discovery;
         private CookbookDataBuilder _cookbookData;
         private GamePriceSource _prices;
+        private IPricingEngine _pricing;
         private MixGuideReader _mixGuideReader;
         private MixGuide _mixGuide;
 
@@ -97,6 +98,16 @@ namespace RecipePlanner.Mod
                 _recipes.Flush();
                 _log.Info($"Repaired {recipesRepaired} recipe(s) that were recorded before their mix " +
                           "was named; they can now be placed under their strain.");
+            }
+
+            // Batches cooked before their mix was named recorded a value of zero, because the
+            // product did not exist to price yet. Repaired on load for the ones already written;
+            // RepriceNamed handles them at naming time from here on.
+            var valued = RepriceZeroValued(existing);
+            if (valued > 0)
+            {
+                _history.Rewrite(existing);
+                _log.Info($"Priced {valued} batch(es) recorded before their product existed.");
             }
 
             _seen.Seed(existing);
@@ -181,6 +192,7 @@ namespace RecipePlanner.Mod
                 var applied = PendingNameResolver.Apply(events, baseProductId, ingredientId, productId, productName);
                 if (applied == 0) return;
 
+                RepriceNamed(events, productId);
                 _history.Rewrite(events);
                 _cookbookData?.Invalidate();
                 _log.Info($"Named mix '{productName}' ({productId}) — {applied} earlier batch(es) updated.");
@@ -203,9 +215,74 @@ namespace RecipePlanner.Mod
         public void AttachPricing(GamePriceSource prices)
         {
             _prices = prices;
-            _tracker = new ProductionTracker(this, _seen, new PricingEngine(prices));
+            _pricing = new PricingEngine(prices);
+            _tracker = new ProductionTracker(this, _seen, _pricing);
             _tracker.ProductionRecorded += OnRecorded;
             _tracker.ProductionRejected += OnRejected;
+        }
+
+        /// <summary>
+        /// Prices batches that were cooked before their mix had a name.
+        ///
+        /// They were priced at completion, when the product did not exist yet — the game only
+        /// creates it when the player types a name — so every one of them recorded a value of zero
+        /// and nothing ever went back for them. Observed on a real save: a batch of a
+        /// newly-invented mix sat at TotalValue 0.0 while an already-named product beside it
+        /// recorded 900.0. It affected exactly the recipes a player cares most about, the ones they
+        /// had just invented.
+        ///
+        /// The price cache has to be dropped first. It is built per save and this product did not
+        /// exist when it was built, so re-pricing against it would confidently produce zero again.
+        /// </summary>
+        /// <summary>
+        /// One-off repair for events already on disk with no value.
+        ///
+        /// Only touches events that have a product and no value at all — a batch that genuinely
+        /// priced to zero is indistinguishable from one that was never priced, so this will retry
+        /// it harmlessly rather than guess. Returns how many actually gained a value, and the
+        /// caller only rewrites the log when that is non-zero: retrying every load is free, but
+        /// rewriting the file every load is not.
+        ///
+        /// Batches still awaiting a name are skipped. There is nothing to price them against yet,
+        /// which is the entire reason they are pending.
+        /// </summary>
+        private int RepriceZeroValued(List<ProductionEvent> events)
+        {
+            if (_pricing == null || events == null) return 0;
+
+            var priced = 0;
+            foreach (var evt in events)
+            {
+                if (evt == null || evt.IsAwaitingName) continue;
+                if (string.IsNullOrEmpty(evt.OutputProductId)) continue;
+                if (evt.TotalValue > 0d) continue;
+
+                _pricing.Price(evt);
+                if (evt.TotalValue > 0d) priced++;
+            }
+
+            return priced;
+        }
+
+        private void RepriceNamed(List<ProductionEvent> events, string productId)
+        {
+            if (_pricing == null || events == null) return;
+
+            _prices?.Invalidate();
+
+            var repriced = 0;
+            foreach (var evt in events)
+            {
+                if (evt == null) continue;
+                if (!string.Equals(evt.OutputProductId, productId, StringComparison.OrdinalIgnoreCase)) continue;
+                if (evt.TotalValue > 0d) continue;   // already priced; leave it alone
+
+                _pricing.Price(evt);
+                if (evt.TotalValue > 0d) repriced++;
+            }
+
+            if (repriced > 0)
+                _log.Info($"Priced {repriced} batch(es) of '{productId}' that were cooked before it was named.");
         }
 
         /// <summary>Hands the phone app a live view. Called once, at startup.</summary>

@@ -431,6 +431,7 @@ differentiator, per the notes above.
 | R13 mixing guide | ✅ built and hook-verified; needs a live look |
 | R10 unguarded reflection | ✅ 30/30 hooks, enforced by a test |
 | R11 ingredient costs | ✅ recorded at pricing time, 5 tests |
+| R14 unnamed-mix value | ✅ priced at naming, and repaired on load |
 
 Everything that could be done without launching the game is done. **Every remaining item needs a
 running game**, which is the one thing this could not do.
@@ -745,3 +746,33 @@ Mix guide: N ingredients, M effects, K transformation(s).
 
 If it does say "derived locally", `GetEffectAtPoint` could not be reached and the numbers are our
 reading of the geometry rather than the game's — worth knowing before trusting the chart.
+
+---
+
+## R14 — Mixes named after the cook recorded no value ✅
+
+Found by reading `PendingNameResolver` rather than by testing, and confirmed against a live save.
+
+A brand-new mix completes with no product — the game only creates one when the player types a name
+— so the batch is priced at completion against a product that does not exist yet, and records zero.
+`PendingNameResolver` then repairs its identity when the name arrives and never touches the money.
+Nothing ever went back for it.
+
+Real events from the reporting save:
+
+```
+"OutputProductName":"Purple Express"  "WasNewDiscovery":false  "TotalValue":900.0
+"OutputProductName":"Aspen Piss"      "WasNewDiscovery":true   "TotalValue":0.0
+```
+
+It affected precisely the recipes a player cares most about: the ones they had just invented. The
+symptom was visible in the report and in the cookbook and was mistaken for a display problem — the
+`$0.00`-versus-`—` fix earlier in the day was treating this bug's output, not its cause.
+
+**Fixed in two places.** `RepriceNamed` prices the affected batches at naming time, after dropping
+the price cache — it is built per save and this product did not exist when it was built, so pricing
+against it would confidently produce zero again. `RepriceZeroValued` repairs events already written,
+on load, and only rewrites the log when something actually gained a value.
+
+A batch that genuinely prices to zero is indistinguishable from one never priced, so the repair
+retries it harmlessly rather than recording a guess.
