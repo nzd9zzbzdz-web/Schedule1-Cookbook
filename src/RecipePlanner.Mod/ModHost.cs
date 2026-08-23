@@ -139,6 +139,11 @@ namespace RecipePlanner.Mod
             _log.Info($"Profile {context} — {stats.Personal.UnitsProduced} units across " +
                       $"{stats.Personal.Batches} batches, {stats.UniqueRecipesProduced} recipes.");
 
+            // Said out loud on every load, not only in co-op. Which side of a session the mod
+            // thinks it is on decides how every later batch gets attributed, and reading it back
+            // from the log beats inferring it from whether the numbers came out plausible.
+            _log.Info($"Session role: {(context.IsHost ? "host or single-player" : "guest in another player's world")}.");
+
             if (PendingNameResolver.HasPending(existing))
                 _log.Info("Some batches are waiting for their mix to be named; they will be " +
                           "credited to the product as soon as you name it in game.");
@@ -461,9 +466,20 @@ namespace RecipePlanner.Mod
                 $"  Quantity  : {evt.Quantity} units ({evt.Quality})\n" +
                 $"  Effects   : {Join(evt.Effects)}\n" +
                 $"  Recipe    : {evt.RecipeId}\n" +
-                $"  Attributed: {evt.Attribution}\n" +
+                $"  Attributed: {evt.Attribution}{Who(evt)}\n" +
                 $"  EventKey  : {evt.EventKey}");
         }
+
+        /// <summary>
+        /// Names the other player on a batch that was not ours.
+        ///
+        /// Attribution alone says "Remote", which is the right word and the wrong amount of
+        /// information when the question being asked is whether co-op attribution actually works.
+        /// </summary>
+        private static string Who(ProductionEvent evt) =>
+            evt.Attribution == Attribution.Remote && !string.IsNullOrEmpty(evt.ProducedByPlayerCode)
+                ? " (player " + evt.ProducedByPlayerCode + ")"
+                : string.Empty;
 
         private void OnRejected(ProductionCandidate candidate, RejectionReason reason)
         {

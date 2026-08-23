@@ -37,6 +37,21 @@ namespace RecipePlanner.Game.Binding
         public bool IsGameLoaded => Reflect.GetBool(LoadManager(), "IsGameLoaded");
 
         /// <summary>
+        /// True when this session is a guest in another player's world rather than the host.
+        ///
+        /// Worth asking separately from "can I build a context", because the two failures need
+        /// opposite responses. A host whose save is still settling should be retried — the answer
+        /// is coming. A guest has no local save folder for someone else's world at all, so retrying
+        /// is just a slower way to arrive at the same place, and the honest thing is to say so.
+        ///
+        /// Defaults to false when there is no Lobby to ask, which keeps single-player on the
+        /// retry path where it belongs.
+        /// </summary>
+        public bool IsJoinedClient =>
+            _lobbyType != null && !Reflect.GetBool(Singleton(_lobbyType), "IsHost", true);
+
+
+        /// <summary>
         /// Builds the context for the currently loaded save, or null if it is not resolvable yet.
         /// Callers must treat null as "not ready" and retry, not as an error.
         /// </summary>
@@ -100,6 +115,13 @@ namespace RecipePlanner.Game.Binding
         /// </summary>
         private const int MaxAttempts = 60;
 
+        /// <summary>
+        /// How long to wait before telling a guest what is going on. Not zero: IsHost can read
+        /// false for a moment while the lobby is still coming up on a host, and announcing the
+        /// wrong verdict confidently is worse than taking a few seconds to be right.
+        /// </summary>
+        private const int ClientVerdictAfter = 8;
+
         public SaveLifecycleWatcher(SaveContextReader reader, ILog log)
         {
             _reader = reader;
@@ -138,6 +160,18 @@ namespace RecipePlanner.Game.Binding
             {
                 _contextDelivered = true;
                 SaveLoaded?.Invoke(context);
+            }
+            else if (_reader.IsJoinedClient && _attempts >= ClientVerdictAfter)
+            {
+                // Retrying will not help a guest: the save folder being looked for belongs to the
+                // host's machine and does not exist on this one. Said plainly and early, because
+                // "nothing happened and I do not know why" is the worst possible answer for
+                // someone who has just joined a friend and is watching for the app to appear.
+                _contextDelivered = true;
+                _log.Warn("Joined another player's world as a guest. This machine has no save " +
+                          "folder for their world, so there is no profile to record against — " +
+                          "tracking and the Cookbook app stay off for this session. Your own " +
+                          "saves are untouched, and hosting works normally.");
             }
             else if (_attempts == MaxAttempts)
             {

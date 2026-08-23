@@ -13,7 +13,7 @@ still unwritten is multiplayer (R6).
 | Field | Value |
 |---|---|
 | **Name** | Schedule I Cookbook |
-| **Summary** | An automatic cookbook, production record and mixing guide, read from your own save. Never writes to it. Requires the `alternate` branch. |
+| **Summary** | An automatic cookbook, production record and mixing guide, read from your own save. Never writes to it. Requires the `alternate` branch — co-op needs both players on it. |
 | **Category** | Miscellaneous (or Gameplay, if Nexus has no better fit for Schedule I) |
 | **Version** | 1.0.0 |
 | **Requirements** | MelonLoader v0.7.3 · Schedule I on the **`alternate` (Mono) Steam branch** |
@@ -181,9 +181,24 @@ Steam → right-click **Schedule I** → **Properties** → **Betas** → choose
 Steam's own description of that branch: *"Uses Mono instead of IL2CPP as the scripting backend. Less
 performant than the default version, but less prone to crashes."*
 
-Two things to know: the game is around 7 GB, so expect a real download; and **back up your saves
-first**, as with any version change. Saves are shared between branches, so nothing is lost by
-switching, but a backup costs nothing.
+Three things to know before you switch.
+
+**1. You will not be able to play with anyone on the default branch.** This is the big one, and it
+is worth more than the download. The game refuses the connection outright:
+
+> **Version Mismatch**
+> Host version: 0.4.6f13 Alternate
+> Your version: 0.4.6f13
+
+Co-op only works when *both* players are on the same branch, so switching means your friends have
+to switch too, or you cannot play together at all. If you play Schedule I with other people, weigh
+that before installing — for some players it is the wrong trade at any price, and I would rather
+say so here than have you find out mid-invite.
+
+**2. The download is around 7 GB.** Expect a real wait.
+
+**3. Back up your saves first**, as with any version change. Saves are shared between branches, so
+nothing is lost by switching — but a backup costs nothing.
 
 **Why?** The mod builds an actual app inside the game's phone. That means creating UI at runtime,
 and subclassing the game's generic `App<T>` base is the single case the default branch's interop
@@ -223,7 +238,13 @@ Use this until R6 is tested, then replace it with what you actually saw. Silence
 admission: "does this work in co-op?" is the question that gets asked either way, and answering it
 on the page beats answering it forty times in the comments.
 
-> **Not fully tested yet.** Here is what the mod is built to do, and what I have not confirmed.
+> **Both players must be on the `alternate` branch.** Confirmed, not assumed — the game refuses a
+> cross-branch connection outright with a "Version Mismatch" error. That is a property of the
+> branch rather than of the mod, but it is the mod that asks you to switch, so it is the mod's job
+> to warn you.
+>
+> **Beyond that, not fully tested yet.** Here is what the mod is built to do, and what I have not
+> confirmed.
 >
 > Each player's copy records to their own machine — nothing is shared or synced between you. Cooks
 > done by another player are recorded but deliberately kept out of your personal totals, the same
