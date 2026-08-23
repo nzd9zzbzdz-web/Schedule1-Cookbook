@@ -33,6 +33,23 @@ is permanent, so both were replaced with synthetic ids below the valid range
 (`76561190000000001` / `...002`). The tests treat them as opaque strings and still pass.
 **Keep it that way** — never commit a real one.
 
+### The MIT window
+
+For transparency: commits `8b4b61c` … `e0c703b` carried an MIT `LICENSE`, before the author decided
+on all-rights-reserved. Those commits are in the public history.
+
+What that means in practice: anyone who obtained the code *during that window* holds an MIT grant
+**for that version**. A licence already given cannot be withdrawn from copies already distributed —
+only future versions can be licensed differently, which is what has now happened.
+
+Realistically the exposure is nil: the window was a few hours, on a new repository with no
+announcement, no stars and no forks. But it is worth knowing rather than assuming, and worth
+remembering as a general rule — **a licence is much easier to loosen later than to tighten.**
+
+If it matters, the options are: make the GitHub repository **private** (the mod still ships from
+Nexus, and the source stops being public at all), or rewrite history to drop those commits — which
+is only meaningful if nobody has cloned it, and cannot claw back a copy that was taken.
+
 ---
 
 ## R1 — Survive the default (IL2CPP) branch 🟡 code done, needs a live IL2CPP run
@@ -335,10 +352,13 @@ with no extra steps.
 
 **Done, except the exit test itself.**
 
-- **LICENCE** — [MIT](../LICENSE) added. This was a call made on your behalf because a repo with no
-  licence is "all rights reserved" by default, which is worse than any choice. MIT is the common
-  default for game mods and matches fully permissive Nexus fields.
-  **Change it now if you disagree** — it is far easier before the first release than after.
+- **LICENCE** — **all rights reserved**, decided by the author. [LICENSE](../LICENSE) grants players
+  personal use and nothing else: no re-uploading, no modpacks, no reuse of the source, no
+  contributions. The source stays public so people can see what the mod does to their machine, which
+  is not the same as licensing it.
+  Every Nexus permission field must be set to **No** to match — a page that contradicts its own
+  licence is what gets argued about later.
+  *(MIT was in place for commits `8b4b61c` through `e0c703b`. See the note under R0.)*
 - **Version** — `0.9.0`, in `MelonInfo`, the Nexus draft and the archive name. Deliberately not
   `1.0.0`: R1, R5 and R6 are unverified, so calling it 1.0 would be a claim not yet earned. Bump to
   `1.0.0` when they pass, and tag the commit to match.
@@ -376,7 +396,7 @@ Current output: `release/Schedule-I-Cookbook-0.9.0.zip`, 88.8 KB, containing `LI
 known-limitations section.
 
 **Copy written:** [07-NEXUS-PAGE.md](07-NEXUS-PAGE.md) — paste-ready description, the form fields,
-permissions set to match the MIT licence, and a 0.9.0 changelog. It leads on "you never log
+permissions set to match the licence, and a 0.9.0 changelog. It leads on "you never log
 anything" and "it never writes to your save", and carries the fail-closed hook check as the
 differentiator, per the notes above.
 

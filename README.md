@@ -156,4 +156,10 @@ hook table no longer matches, so it drops straight into CI.
 
 ## Licence
 
-[MIT](LICENSE).
+**All rights reserved.** See [LICENSE](LICENSE).
+
+The source is public so you can see exactly what the mod does to your machine and your saves — not
+so it can be reused. Please do not re-upload it, bundle it, or reuse the code. **Contributions are
+not being accepted**, so please do not open pull requests.
+
+If you want to do something with it, ask first.

@@ -14,19 +14,30 @@ Paste-ready text for the mod page, plus the form fields Nexus asks for. Nothing 
 | **Category** | Miscellaneous (or Gameplay, if Nexus has no better fit for Schedule I) |
 | **Version** | 0.9.0 |
 | **Requirements** | MelonLoader v0.7.3 |
-| **Licence** | MIT — see [LICENSE](../LICENSE) |
+| **Licence** | All rights reserved — see [LICENSE](../LICENSE) |
 
 ### Permissions
 
-MIT permits all of the below. Set the Nexus fields to match, or the licence and the page contradict
-each other:
+**All rights reserved.** Set every Nexus permission to **No**, or the page and the licence
+contradict each other — and a contradiction is what gets argued about later:
 
 | Permission | Setting |
 |---|---|
-| Users can upload this file to other sites | Yes |
-| Users can convert this file to work on other games | Yes |
-| Users can modify and release under their own name | Yes — credit appreciated, not required |
-| Users can use assets without permission | Yes |
+| Users can upload this file to other sites | **No** |
+| Users can convert this file to work on other games | **No** |
+| Users can modify and release under their own name | **No** |
+| Users can use assets without permission | **No** |
+| Users can modify for their own personal use | **No** |
+| Users can use this in a modpack / collection | **No** — ask first |
+
+Nexus also has a free-text permissions box. Something like:
+
+> Please do not re-upload this mod anywhere, include it in modpacks, or reuse its code. The source
+> is public so you can see what it does, not so it can be reused. If you want to do something with
+> it, just ask me first — I'm not unreasonable, I'd just like to be asked.
+
+Worth adding an **"Ask permission"** note rather than pure refusal. It costs nothing, reads far
+better to the community, and you keep every legal right either way.
 
 ---
 

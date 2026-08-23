@@ -105,7 +105,7 @@ INSTALL
 
 CHECK IT WORKED
   Look in  Schedule I\MelonLoader\Latest.log  for:
-      [Schedule_I_Cookbook] Symbol check PASSED (13/13 hooks resolved)
+      [Schedule_I_Cookbook] Symbol check PASSED (16/16 hooks resolved)
       [Schedule_I_Cookbook] Production tracking ENABLED
 
 BRANCHES
@@ -122,7 +122,7 @@ UNINSTALL
   Delete %APPDATA%\Schedule1RecipePlanner\ to remove its data too.
 
 Full guide, troubleshooting and source: see the mod page.
-Licensed MIT -- see LICENSE.
+All rights reserved -- see LICENSE. Please do not re-upload or reuse.
 "@ | Set-Content -Path (Join-Path $staging 'README.txt') -Encoding UTF8
 
 # --- zip ---------------------------------------------------------------------------------------
