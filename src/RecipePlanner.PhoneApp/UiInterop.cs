@@ -64,12 +64,53 @@ namespace RecipePlanner.PhoneApp
 
                 AddTrigger(trigger, EventTriggerType.PointerEnter, () => onChanged(true));
                 AddTrigger(trigger, EventTriggerType.PointerExit, () => onChanged(false));
+
+                // EventTrigger implements EVERY handler interface, IScrollHandler included, and
+                // Unity delivers a scroll to the first object in the hierarchy that handles it.
+                // Attaching one to a row therefore made the row swallow the wheel, and the list
+                // stopped scrolling — even though only enter and exit were registered. Registering
+                // no callback for scroll does not decline the event; implementing the interface is
+                // what claims it.
+                //
+                // So it is passed on deliberately. Without this, fixing hover breaks scrolling.
+                AddScrollForwarder(trigger, target);
             }
             catch (Exception ex)
             {
                 // Hover is a nicety; losing it must never cost the row itself.
                 RecipePlanner.UI.RecipePlannerUI.Log?.Warn("Could not wire hover: " + ex.Message);
             }
+        }
+
+        /// <summary>
+        /// Hands the wheel back to the list this object sits in.
+        ///
+        /// The ScrollRect is looked up when the event arrives rather than captured up front: rows
+        /// are recycled and reparented as the list scrolls, and a reference taken at wire time
+        /// could easily outlive the hierarchy it was found in.
+        /// </summary>
+        private static void AddScrollForwarder(EventTrigger trigger, GameObject target)
+        {
+            var entry = new EventTrigger.Entry { eventID = EventTriggerType.Scroll };
+
+            Action<BaseEventData> handler = data =>
+            {
+                try
+                {
+                    var scroll = target.GetComponentInParent<ScrollRect>();
+                    if (scroll == null) return;
+
+                    // TryCast rather than 'as': these are Il2Cpp proxy objects, where a C# cast
+                    // does not consult the native type.
+                    var pointer = data?.TryCast<PointerEventData>();
+                    if (pointer != null) scroll.OnScroll(pointer);
+                }
+                catch { /* a dropped notch must never take the row down */ }
+            };
+
+            entry.callback.AddListener(
+                Il2CppInterop.Runtime.DelegateSupport.ConvertDelegate<UnityAction<BaseEventData>>(handler));
+            trigger.triggers.Add(entry);
         }
 
         private static void AddTrigger(EventTrigger trigger, EventTriggerType type, Action action)
