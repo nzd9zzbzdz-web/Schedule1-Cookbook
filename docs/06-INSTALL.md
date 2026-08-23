@@ -4,11 +4,58 @@ For players. If you are building from source, see [04-SETUP.md](04-SETUP.md) ins
 
 ## What you need
 
-- **Schedule I** on Steam
+- **Schedule I** on Steam, switched to the **`alternate` branch** (Step 0 below — this is required)
 - **MelonLoader v0.7.3** — <https://melonwiki.xyz/#/README?id=automated-installation>
 
 That is all. Do **not** download Newtonsoft.Json or anything else separately — MelonLoader already
 ships everything this mod needs.
+
+## Step 0 — switch to the `alternate` Steam branch
+
+**Required.** Do this first, before installing MelonLoader. The Cookbook app cannot run on the
+default branch.
+
+1. Open Steam and go to **Library**
+2. **Right-click Schedule I** → **Properties**
+3. In the left sidebar, click **Betas**
+4. In the **Beta Participation** dropdown, choose **`alternate`**
+5. Close the window — Steam downloads the change on its own
+
+Steam's own description of that branch:
+
+> Uses Mono instead of IL2CPP as the scripting backend. Less performant than the default version,
+> but less prone to crashes.
+
+> **Back up your saves first**, as you would before any game version change. Saves are shared
+> between the branches, so switching does not delete anything, but the game is a different build
+> and a backup costs nothing:
+>
+> ```
+> %USERPROFILE%\AppData\LocalLow\TVGS\Schedule I\Saves\
+> ```
+
+The game is around 7 GB, so expect a substantial download when you switch — and again if you ever
+switch back.
+
+### Why is this needed?
+
+The mod builds a real app inside the game's phone. That means creating UI components at runtime,
+which the default branch's scripting backend (IL2CPP) makes dramatically harder — specifically,
+subclassing the game's generic `App<T>` base is the case the IL2CPP interop layer handles worst.
+
+The `alternate` branch uses Mono instead, where this is straightforward.
+
+### What if I install it on the default branch anyway?
+
+It will not crash. The mod checks at startup, skips the UI, and tells you:
+
+```
+IL2CPP branch detected. This mod is built and tested for the 'alternate' (Mono) Steam branch.
+```
+
+Production tracking may well still work there — it reads the game by reflection and handles both
+naming schemes — but **it is untested and unsupported**, and there is no Cookbook app. If you report
+a problem from the default branch, the first answer will be "please switch branches".
 
 ## Step 1 — install MelonLoader
 
@@ -20,9 +67,8 @@ It adds a `MelonLoader\` folder and a `version.dll`. Nothing of the game's is ov
 
 ## Step 2 — launch the game once, and wait
 
-**Do this before installing the mod.** On the default branch MelonLoader has to generate its proxy
-assemblies on first run. It takes anywhere from ~30 seconds to a couple of minutes, and the game
-will look like it has frozen. It has not. Let it finish and reach the main menu, then quit.
+**Do this before installing the mod.** MelonLoader sets itself up on first run, and the game can
+look like it has frozen while it does. It has not. Let it finish and reach the main menu, then quit.
 
 Skipping this step is the single most common way to get a mod that "doesn't load".
 
@@ -37,7 +83,7 @@ Schedule I\
     ├── RecipePlanner.Core.dll
     ├── RecipePlanner.Game.dll
     ├── RecipePlanner.UI.dll
-    └── RecipePlanner.PhoneApp.dll      (Mono branch only — see below)
+    └── RecipePlanner.PhoneApp.dll      (this one draws the app)
 ```
 
 All of them are required. Copying only `RecipePlanner.dll` will not work.
@@ -54,49 +100,6 @@ Launch the game and watch the MelonLoader console, or open
 ```
 
 Load a save and cook one batch. You should get exactly one `Production Detected` block.
-
-## Which Steam branch, and what you get
-
-Both branches work. They do not get the same features.
-
-| | Default branch | `alternate` branch |
-|---|---|---|
-| Production tracking, history, statistics | ✅ | ✅ |
-| Automatic recipe discovery | ✅ | ✅ |
-| **Readable `cookbook.md` export** | ✅ | ✅ |
-| **Cookbook app on the in-game phone** | ❌ | ✅ |
-
-The tracking works everywhere. The phone app cannot run on the default branch for a technical
-reason that is not worth working around yet — it has to build UI objects inside the game, and the
-default branch's scripting backend makes that far harder.
-
-The mod tells you which mode it is in at startup:
-
-```
-IL2CPP branch detected — tracking, history and statistics all work normally, but the
-in-game Cookbook app is Mono-only and will not appear.
-```
-
-That message is expected on the default branch. It is not an error.
-
-### Switching to the `alternate` branch (optional)
-
-Steam → right-click **Schedule I** → **Properties** → **Betas** → select **`alternate`**.
-
-Steam's own description of it:
-
-> Uses Mono instead of IL2CPP as the scripting backend. Less performant than the default version,
-> but less prone to crashes.
-
-Saves are shared between the two branches. **Back up your saves before switching**, as you would
-before any game version change — they live in:
-
-```
-%USERPROFILE%\AppData\LocalLow\TVGS\Schedule I\Saves\
-```
-
-After switching, launch once before playing so MelonLoader settles.
-
 ## Where your data goes
 
 The mod **never writes to your game saves.** Everything it records is its own, here:
@@ -121,9 +124,8 @@ Every time a save unloads, the mod writes a readable Markdown file containing yo
 by strain with their full ingredient chains, your production totals, per-product and per-ingredient
 breakdowns, and your records.
 
-**On the default branch this is the mod's main output**, since the phone app is Mono-only. It opens
-in any text editor, and renders nicely in anything that understands Markdown — Obsidian, VS Code,
-GitHub, Discord.
+It opens in any text editor, and renders nicely in anything that understands Markdown — Obsidian,
+VS Code, GitHub, Discord. Handy for keeping a copy of a cookbook, or sharing one.
 
 It is rewritten from scratch each time, so do not edit it — copy it somewhere else first if you want
 to keep a version. Nothing is lost either way: it is derived entirely from `events.jsonl`.
@@ -148,8 +150,9 @@ let the first-run generation finish.
 not caught up. This is deliberate — it refuses to record numbers it cannot trust rather than
 recording wrong ones. Report it with the log and wait for an update.
 
-**No Cookbook app on the phone.** Expected on the default branch — see above. On the `alternate`
-branch, check `RecipePlanner.PhoneApp.dll` actually made it into `Mods\`.
+**No Cookbook app on the phone.** Check you are on the `alternate` branch (Step 0) — the app cannot
+run on the default one. If you are, check `RecipePlanner.PhoneApp.dll` actually made it into the
+Mods folder.
 
 **No money figures anywhere.** If the mod could not read the game's price table, it says so in the
 log and leaves money out of `cookbook.md` entirely rather than printing a confident `$0`. Units,

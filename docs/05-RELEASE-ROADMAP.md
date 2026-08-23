@@ -52,7 +52,10 @@ is only meaningful if nobody has cloned it, and cannot claw back a copy that was
 
 ---
 
-## R1 — Survive the default (IL2CPP) branch 🟡 Mono half confirmed live; IL2CPP half untested
+## R1 — Survive the default (IL2CPP) branch ✅ closed
+
+1.0 ships Mono-only; see **Scope decision** at the end of this document. The work below still runs,
+and is what makes a default-branch install degrade cleanly instead of failing.
 
 ### The problem
 
@@ -415,7 +418,7 @@ differentiator, per the notes above.
 | Step | State |
 |---|---|
 | R0 repo | ✅ done |
-| R1 IL2CPP blocker | 🟡 **Mono half fully confirmed** (incl. multi-save reinstall); IL2CPP half untested |
+| R1 IL2CPP blocker | ✅ **closed** — 1.0 ships Mono-only; IL2CPP degrades safely but is unsupported |
 | R2 scope / naming | ✅ done |
 | R3 documentation | ✅ done |
 | R4 install guide | ✅ written; **needs one clean-install walkthrough** |
@@ -647,3 +650,38 @@ Final evidence:
 Death Ghost appeared under OG KUSH with its full four-level chain
 (`ogkush → thickmonkey → purpleexpress → aspenpiss → deathghost`), the ORIGIN UNKNOWN section was
 gone, and the save file still knew only 3 recipes throughout.
+
+---
+
+## Scope decision — 1.0 is Mono-only
+
+Taken 2026-08-23, by the author, after the cost became clear.
+
+Verifying the IL2CPP branch means switching Steam branches and back: the game is ~7 GB and the two
+branches are different builds, so roughly 15 GB of traffic to test one code path. That cost was not
+apparent when the roadmap was written, and it changes the trade-off.
+
+**1.0 requires the `alternate` (Mono) branch.** Every claim on the mod page is then something that
+has actually been run on a live game. IL2CPP becomes a 1.1 question, decided by whether real users
+ask for it.
+
+### The R1 work was not wasted
+
+It is arguably worth more now. The mod tells people they need the Mono branch, and some will install
+it on the default branch regardless — that is simply what happens. Because of R1 they get a clear
+warning instead of a hard failure at startup:
+
+```
+IL2CPP branch detected. This mod is built and tested for the 'alternate' (Mono) Steam branch.
+```
+
+The message deliberately does **not** claim tracking works there. It very probably does — the
+tracking assemblies carry no game references and `SymbolGuard` resolves the `Il2Cpp*` proxy names —
+but probably is not tested, and this project's whole value is not asserting what it has not
+verified.
+
+### If IL2CPP support is ever wanted
+
+Nothing needs undoing. `RecipePlanner.Mod`, `.Core`, `.Game` and `.UI` are already branch-agnostic
+and carry no game references; only `RecipePlanner.PhoneApp` is Mono-bound, and it is loaded by name
+rather than linked. The work is porting the UI, not unpicking the architecture.

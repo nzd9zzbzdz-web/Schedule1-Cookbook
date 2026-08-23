@@ -44,32 +44,40 @@ Release readiness is tracked in [05-RELEASE-ROADMAP.md](docs/05-RELEASE-ROADMAP.
 
 | Step | What is left |
 |---|---|
-| R1 | Mono branch confirmed live; the **IL2CPP branch is still untested** |
 | R6 | Multiplayer client-vs-host behaviour needs testing and documenting |
 | R8 | Screenshots |
 
+**1.0 ships for the `alternate` (Mono) branch only** — every claim on the mod page is then something
+that has actually been tested. IL2CPP support is a 1.1 question, once there are real users to say
+whether it is wanted.
+
 Confirmed on a live save (2026-08-23, Mono): 16/16 symbol check, patching, branch detection, the
-Cookbook app, production tracking across two saves, recipe discovery,
-`Prices loaded: 18 products, 198 ingredients`, and `cookbook.md` written with real data.
+Cookbook app across two consecutive saves, production tracking, recipe discovery,
+`Prices loaded: 18 products, 198 ingredients`, `cookbook.md` written with real data, and three
+consecutive new mixes placed under their strain without saving.
 
-## Which Steam branch?
+## Steam branch requirement
 
-Both work, but they do not get the same features.
+**This mod requires the `alternate` (Mono) Steam branch.**
 
-| | Default (IL2CPP) | `alternate` (Mono) |
-|---|---|---|
-| Production tracking, history, statistics | ✅ | ✅ |
-| Automatic recipe discovery | ✅ | ✅ |
-| **Readable `cookbook.md` export** | ✅ | ✅ |
-| **Cookbook app on the in-game phone** | ❌ | ✅ |
+Steam → right-click **Schedule I** → **Properties** → **Betas** → select **`alternate`**.
 
-The tracking half reaches the game purely by reflection and resolves `ScheduleOne.*` and the
-`Il2CppScheduleOne.*` proxy names alike, so it is branch-agnostic. The phone UI is not: building UI
-means creating components *inside* the game, and subclassing the generic `App<T>` base is the case
-Il2CppInterop handles worst.
+The in-game Cookbook app cannot run on the default branch. Building UI means creating components
+*inside* the game, and subclassing the generic `App<T>` base is the case Il2CppInterop handles
+worst — so the phone app is Mono-only and that is not likely to change soon.
 
-The mod detects the branch at startup and says which mode it is in. On IL2CPP it loads, tracks, and
-tells you the app is unavailable — it does not fail.
+### What happens if you install it on the default branch anyway
+
+It will not crash. The mod detects the branch at startup, skips loading the UI, and says so:
+
+```
+IL2CPP branch detected. This mod is built and tested for the 'alternate' (Mono) Steam branch.
+```
+
+Production tracking is reflection-based and resolves the `Il2CppScheduleOne.*` proxy names as well
+as `ScheduleOne.*`, so it very likely still works there. **That is untested and unsupported** — and
+this project does not claim what it has not verified. See
+[05-RELEASE-ROADMAP.md](docs/05-RELEASE-ROADMAP.md) R1.
 
 ## Install
 

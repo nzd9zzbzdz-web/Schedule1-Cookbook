@@ -1,7 +1,10 @@
 # Nexus page — draft copy
 
-Paste-ready text for the mod page, plus the form fields Nexus asks for. Nothing here is live until
-[05-RELEASE-ROADMAP.md](05-RELEASE-ROADMAP.md) R1/R5/R6 are confirmed on a running game.
+Paste-ready text for the mod page, plus the form fields Nexus asks for.
+
+**1.0 ships for the `alternate` (Mono) branch only.** Every claim below is something that has been
+verified on a running game — see [05-RELEASE-ROADMAP.md](05-RELEASE-ROADMAP.md). The one section
+still unwritten is multiplayer (R6).
 
 ---
 
@@ -10,10 +13,10 @@ Paste-ready text for the mod page, plus the form fields Nexus asks for. Nothing 
 | Field | Value |
 |---|---|
 | **Name** | Schedule I Cookbook |
-| **Summary** | An automatic cookbook and production record for your mixes. Never writes to your save. |
+| **Summary** | An automatic cookbook and production record for your mixes. Never writes to your save. Requires the `alternate` branch. |
 | **Category** | Miscellaneous (or Gameplay, if Nexus has no better fit for Schedule I) |
 | **Version** | 0.9.0 |
-| **Requirements** | MelonLoader v0.7.3 |
+| **Requirements** | MelonLoader v0.7.3 · Schedule I on the **`alternate` (Mono) Steam branch** |
 | **Licence** | All rights reserved — see [LICENSE](../LICENSE) |
 
 ### Permissions
@@ -138,7 +141,7 @@ employees cook while you are somewhere else.
 - **Recipes discover themselves.** Invent a mix in-game and it appears in the cookbook unprompted.
 - **Employee cooks are tracked but kept separate**, so your personal totals stay yours.
 - **A readable cookbook outside the game.** Your recipes, chains and totals are also written to a
-  `cookbook.md` file you can open in any editor, keep, or share. Works on **both** Steam branches.
+  `cookbook.md` file you can open in any editor, keep, or share.
 
 ### It will not touch your save
 
@@ -158,28 +161,29 @@ This one checks all 16 of the game symbols it depends on **before** it patches a
 one has moved, it disables tracking, says so in the log, and records nothing. Wrong statistics are
 worse than no statistics.
 
-### Which Steam branch?
+### ⚠️ Requires the `alternate` Steam branch
 
-Both work. They do not get the same features.
+**Read this before downloading.** This mod needs Schedule I switched to the **`alternate` (Mono)**
+branch. The Cookbook app cannot run on the default branch.
 
-| | Default branch | `alternate` branch |
-|---|---|---|
-| Production tracking, history, statistics | ✅ | ✅ |
-| Automatic recipe discovery | ✅ | ✅ |
-| **Readable `cookbook.md` export** | ✅ | ✅ |
-| **Cookbook app on the in-game phone** | ❌ | ✅ |
+Switching takes four clicks:
 
-The tracking half works everywhere. The phone app needs the `alternate` (Mono) branch — it has to
-build UI inside the game, which the default branch's scripting backend makes far harder.
+Steam → right-click **Schedule I** → **Properties** → **Betas** → choose **`alternate`**.
 
-**On the default branch you still get everything except the in-game screen:** tracking runs
-normally, and your cookbook is written to a readable `cookbook.md` you can open any time.
+Steam's own description of that branch: *"Uses Mono instead of IL2CPP as the scripting backend. Less
+performant than the default version, but less prone to crashes."*
 
-The mod detects your branch at startup and tells you which mode it is in. On the default branch it
-loads and tracks normally; it does not fail.
+Two things to know: the game is around 7 GB, so expect a real download; and **back up your saves
+first**, as with any version change. Saves are shared between branches, so nothing is lost by
+switching, but a backup costs nothing.
 
-To switch: Steam → right-click **Schedule I** → **Properties** → **Betas** → **`alternate`**.
-Saves are shared between branches — back them up first, as with any version change.
+**Why?** The mod builds an actual app inside the game's phone. That means creating UI at runtime,
+and subclassing the game's generic `App<T>` base is the single case the default branch's interop
+layer handles worst. On Mono it is straightforward.
+
+**If you install it on the default branch anyway,** it will not crash — it detects the branch, skips
+the UI, and says so in the log. Production tracking may well still work there, but that is untested
+and unsupported, and there is no Cookbook app.
 
 ### Install
 

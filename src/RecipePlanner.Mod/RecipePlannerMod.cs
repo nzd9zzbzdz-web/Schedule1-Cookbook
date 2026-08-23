@@ -107,10 +107,15 @@ namespace RecipePlanner.Mod
                 }
                 else
                 {
-                    LoggerInstance.Msg(
-                        "IL2CPP branch detected — tracking, history and statistics all work normally, " +
-                        "but the in-game Cookbook app is Mono-only and will not appear. Switch " +
-                        "Schedule I to the 'alternate' Steam branch to get it.");
+                    // Deliberately does NOT claim tracking works here. It very probably does — this
+                    // assembly reaches the game only by reflection and resolves the Il2Cpp proxy
+                    // names too — but "probably" is not "tested", and the mod's whole reputation
+                    // rests on not asserting things it has not verified.
+                    LoggerInstance.Warning(
+                        "IL2CPP branch detected. This mod is built and tested for the 'alternate' " +
+                        "(Mono) Steam branch. The in-game Cookbook app CANNOT run here, and nothing " +
+                        "on this branch is supported or tested. To switch: Steam > right-click " +
+                        "Schedule I > Properties > Betas > 'alternate'.");
                 }
             }
             catch (Exception ex)

@@ -98,6 +98,9 @@ $modName v$version
 ==================
 
 INSTALL
+  0. Switch Schedule I to the "alternate" Steam branch (REQUIRED):
+     Steam > right-click Schedule I > Properties > Betas > "alternate".
+     Back up your saves first. The game is ~7GB, so expect a download.
   1. Install MelonLoader v0.7.3 into your Schedule I folder.
   2. Launch the game ONCE and let it reach the main menu. First run generates files and can
      look frozen for up to a minute. Do not skip this.
@@ -109,9 +112,10 @@ CHECK IT WORKED
       [Schedule_I_Cookbook] Production tracking ENABLED
 
 BRANCHES
-  Tracking, history and statistics work on BOTH Steam branches.
-  The in-game Cookbook phone app needs the 'alternate' (Mono) branch.
-  The mod tells you which mode it is in at startup.
+  This mod REQUIRES the "alternate" (Mono) Steam branch.
+  Steam > right-click Schedule I > Properties > Betas > "alternate".
+  On the default branch the Cookbook app cannot run. The mod will not crash --
+  it detects the branch and says so in the log -- but nothing there is supported.
 
 YOUR SAVES ARE NOT TOUCHED
   This mod never writes to game save data. Its own records live in
