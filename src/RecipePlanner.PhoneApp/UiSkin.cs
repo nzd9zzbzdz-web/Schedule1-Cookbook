@@ -26,14 +26,38 @@ namespace RecipePlanner.PhoneApp
         private const int GlowRadius = 12;
         private const int GlowSpread = 12;
 
+        private const int RingSize = 48;
+        private const int RingRadius = 12;
+        private const float RingThickness = 1.6f;
+
+        private const int PillSize = 64;
+
         private static Sprite _body;
         private static Sprite _glow;
+        private static Sprite _ring;
+        private static Sprite _pill;
 
         /// <summary>A rounded rectangle, 9-sliced so it never distorts however it is stretched.</summary>
         public static Sprite Body => _body ?? (_body = BuildBody());
 
         /// <summary>The same shape with a soft falloff outside it, used as an underglow.</summary>
         public static Sprite Glow => _glow ?? (_glow = BuildGlow());
+
+        /// <summary>
+        /// The outline of that rectangle and nothing else.
+        ///
+        /// A separate sprite rather than a body behind a slightly smaller body: two stacked fills
+        /// cannot produce a border over a background that is not flat, and the app's is not — it
+        /// sits over the game world. A real hollow ring keeps the interior genuinely transparent.
+        /// </summary>
+        public static Sprite Ring => _ring ?? (_ring = BuildRing());
+
+        /// <summary>
+        /// A fully-rounded capsule for toolbar pills. Distinct from <see cref="Body"/> because a
+        /// pill's radius is half its height, and a 9-slice cannot grow a corner radius — a body
+        /// sprite stretched to pill height keeps its original, much smaller, corners.
+        /// </summary>
+        public static Sprite Pill => _pill ?? (_pill = BuildPill());
 
         /// <summary>
         /// Dropped when the app is torn down. Sprites and textures are unmanaged Unity objects; if
@@ -44,6 +68,8 @@ namespace RecipePlanner.PhoneApp
         {
             Destroy(ref _body);
             Destroy(ref _glow);
+            Destroy(ref _ring);
+            Destroy(ref _pill);
         }
 
         private static void Destroy(ref Sprite sprite)
@@ -105,6 +131,46 @@ namespace RecipePlanner.PhoneApp
             }
 
             return ToSprite(pixels, GlowSize, GlowRadius + GlowSpread);
+        }
+
+        private static Sprite BuildRing()
+        {
+            var pixels = new Color[RingSize * RingSize];
+            var half = RingSize * 0.5f;
+
+            for (var y = 0; y < RingSize; y++)
+            for (var x = 0; x < RingSize; x++)
+            {
+                var d = RoundedBoxDistance(x, y, half, half, RingRadius);
+
+                // Distance from the outline itself rather than from the shape: |d| is zero on the
+                // edge and grows either side, so a band around zero is the stroke. Falling off over
+                // one pixel at each end keeps it smooth at any scale.
+                var a = Mathf.Clamp01(RingThickness * 0.5f - Mathf.Abs(d) + 0.5f);
+                pixels[y * RingSize + x] = new Color(1f, 1f, 1f, a);
+            }
+
+            return ToSprite(pixels, RingSize, RingRadius);
+        }
+
+        private static Sprite BuildPill()
+        {
+            var pixels = new Color[PillSize * PillSize];
+            var half = PillSize * 0.5f;
+
+            for (var y = 0; y < PillSize; y++)
+            for (var x = 0; x < PillSize; x++)
+            {
+                // Radius equal to the half-extent makes the rounded box a circle, which is exactly
+                // the cap a capsule needs at each end.
+                var d = RoundedBoxDistance(x, y, half, half, half);
+                var a = Mathf.Clamp01(0.5f - d);
+                pixels[y * PillSize + x] = new Color(1f, 1f, 1f, a);
+            }
+
+            // One pixel short of half, so the 9-slice keeps a sliver of middle to stretch. A border
+            // of exactly half leaves no stretchable centre and the sprite refuses to widen.
+            return ToSprite(pixels, PillSize, PillSize / 2 - 1);
         }
 
         /// <summary>

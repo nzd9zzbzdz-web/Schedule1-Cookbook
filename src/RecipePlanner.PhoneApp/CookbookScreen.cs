@@ -156,19 +156,38 @@ namespace RecipePlanner.PhoneApp
             var background = CreateChild(_root, "CookbookBackground");
             Anchor(background, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var backgroundImage = background.gameObject.AddComponent<Image>();
-            backgroundImage.color = new Color(0.10f, 0.10f, 0.12f, 1f);
+            backgroundImage.color = AppBackground;
             background.SetAsFirstSibling();
 
             var titleBar = CreateChild(_root, "CookbookTitleBar");
             Anchor(titleBar, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -TitleHeight), Vector2.zero);
             var titleImage = titleBar.gameObject.AddComponent<Image>();
-            titleImage.color = new Color(0.42f, 0.13f, 0.15f, 1f);   // matches the game's app headers
+            titleImage.color = HeaderFill;
 
-            AddGloss(titleBar, 0.18f, 0.22f);
+            AddGloss(titleBar, 0.05f, 0.09f);
 
+            BuildHeaderMark(titleBar, font);
+
+            // Three runs of text rather than one string, because they are three different things:
+            // the app's name, how much is in it, and whose it is. One Text can only be one colour,
+            // and the name being white while the character is green is what stops the header
+            // reading as an undifferentiated sentence.
             _header = CreateText(titleBar, "CookbookHeader", "Cookbook", font, TitleFontSize, FontStyle.Bold);
-            Anchor(_header.rectTransform, Vector2.zero, Vector2.one,
-                   new Vector2(14f, 0f), new Vector2(-14f, 0f));
+            _header.color = TitleText;
+            Anchor(_header.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 1f),
+                   new Vector2(HeaderMarkWidth, 0f), new Vector2(-14f, 0f));
+
+            _headerCount = CreateText(titleBar, "CookbookCount", "", font, TitleFontSize - 6, FontStyle.Normal);
+            _headerCount.color = StatText;
+            Anchor(_headerCount.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 1f),
+                   new Vector2(HeaderMarkWidth, 0f), new Vector2(-14f, 0f));
+
+            _headerProfile = CreateText(titleBar, "CookbookProfile", "", font, TitleFontSize - 6, FontStyle.Bold);
+            _headerProfile.color = Neon;
+            Anchor(_headerProfile.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 1f),
+                   new Vector2(HeaderMarkWidth, 0f), new Vector2(-14f, 0f));
+
+            BuildStatusPip(titleBar, font);
 
             BuildToolbar(font);
 
@@ -184,6 +203,13 @@ namespace RecipePlanner.PhoneApp
             _caption = CreateText(_root, "Caption", "", font, CaptionFontSize, FontStyle.Bold);
             _caption.color = HeaderText;
             Anchor(_caption.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f),
+                   new Vector2(12f, CaptionBottom), new Vector2(-12f, CaptionTop));
+
+            // The strain and the tally are different kinds of fact, so they get different weights:
+            // which strain you are looking at is the answer, how many it holds is a footnote.
+            _captionCount = CreateText(_root, "CaptionCount", "", font, CaptionFontSize - 2, FontStyle.Normal);
+            _captionCount.color = StatText;
+            Anchor(_captionCount.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f),
                    new Vector2(12f, CaptionBottom), new Vector2(-12f, CaptionTop));
 
             _viewport = CreateChild(_root, "CookbookViewport");
@@ -357,16 +383,18 @@ namespace RecipePlanner.PhoneApp
                 _entries.Clear();
                 _listContent.sizeDelta = Vector2.zero;
                 ClearStrip();
-                _caption.text = "";
+                LayoutCaption("", "");
                 ShowPlaceholder(font, "No recipes recorded yet — cook something and it will appear here.");
-                if (_header != null) _header.text = "Cookbook";
+                LayoutHeader("", "");
+                SetStatus(false, "No save");
                 return;
             }
 
             ShowPlaceholder(font, null);
 
-            if (_header != null)
-                _header.text = $"Cookbook — {_model.TotalRecipes} recipes · {_model.ProfileLabel}";
+            LayoutHeader($"— {_model.TotalRecipes} recipes ·", _model.ProfileLabel);
+            SetStatus(true, "Tracking");
+            RefreshHeaderMark();
 
             RefreshStrip(font);
             Relayout();
@@ -407,7 +435,7 @@ namespace RecipePlanner.PhoneApp
                 foreach (var entry in section.Entries)
                     if (entry != null) _entries.Add(entry);
 
-                _caption.text = $"{Title(section)}   ·   {section.Count} recipes";
+                LayoutCaption(Title(section), section.Count + " recipes");
             }
             else if (_model?.Sections != null)
             {
@@ -420,7 +448,7 @@ namespace RecipePlanner.PhoneApp
 
                 // A selection that no longer exists — the strain's last recipe was hidden — falls
                 // back to showing everything rather than an empty list with no way out.
-                _caption.text = $"ALL STRAINS   ·   {_entries.Count} recipes";
+                LayoutCaption("ALL STRAINS", _entries.Count + " recipes");
             }
 
             _listContent.sizeDelta = new Vector2(0f, ListTopPad + _entries.Count * RowPitch + 8f);
@@ -746,7 +774,9 @@ namespace RecipePlanner.PhoneApp
             public string RootProductId;
 
             private Image _border;
+            private Image _outline;
             private Image _fill;
+            private Text _allLabel;
             private Text _count;
 
             public static StrainTile Create(
@@ -766,19 +796,28 @@ namespace RecipePlanner.PhoneApp
                 tile.Root.offsetMin = new Vector2(x, TileInset);
                 tile.Root.offsetMax = new Vector2(x + width, -TileInset);
 
+                // The fill is the whole tile and the border is a real outline over it. This used to
+                // be a coloured backing showing through around an inset fill, which was the only
+                // way to fake an outline before UiSkin could generate one — that trick cannot make
+                // a thin border without also making the tile visibly smaller.
                 tile._border = tile.Root.gameObject.AddComponent<Image>();
                 tile._border.sprite = UiSkin.Body;
                 tile._border.type = Image.Type.Sliced;
+                tile._border.color = Transparent;
 
-                // The border is this image showing through around an inset fill — a mod has no
-                // sprite assets to draw a real outline with, so the "outline" is the gap.
                 var fillRect = CreateChild(tile.Root, "Fill");
-                Anchor(fillRect, Vector2.zero, Vector2.one,
-                       new Vector2(TileBorder, TileBorder), new Vector2(-TileBorder, -TileBorder));
+                Anchor(fillRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
                 tile._fill = fillRect.gameObject.AddComponent<Image>();
                 tile._fill.sprite = UiSkin.Body;
                 tile._fill.type = Image.Type.Sliced;
                 tile._fill.raycastTarget = false;
+
+                var outlineRect = CreateChild(tile.Root, "Outline");
+                Anchor(outlineRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+                tile._outline = outlineRect.gameObject.AddComponent<Image>();
+                tile._outline.sprite = UiSkin.Ring;
+                tile._outline.type = Image.Type.Sliced;
+                tile._outline.raycastTarget = false;
 
                 // Tiles get the same underglow as the buttons, so hovering a strain reads the same
                 // way as hovering anything else in the app.
@@ -813,6 +852,7 @@ namespace RecipePlanner.PhoneApp
                     var all = CreateText(tile.Root, "AllLabel", label, font, TileFontSize, FontStyle.Bold);
                     all.alignment = TextAnchor.MiddleCenter;
                     all.color = NameText;
+                    tile._allLabel = all;
                     Anchor(all.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(0f, -2f));
                 }
 
@@ -836,9 +876,10 @@ namespace RecipePlanner.PhoneApp
 
             public void SetSelected(bool selected)
             {
-                _border.color = selected ? TileBorderSelected : TileBorderIdle;
+                _outline.color = selected ? TileBorderSelected : TileBorderIdle;
                 _fill.color = selected ? TileFillSelected : TileFillIdle;
-                _count.color = selected ? HeaderText : ChainText;
+                _count.color = selected ? Neon : ChainText;
+                if (_allLabel != null) _allLabel.color = selected ? Neon : NameText;
             }
         }
         // ---------- pooled row view ----------
@@ -858,6 +899,8 @@ namespace RecipePlanner.PhoneApp
             private Font _font;
 
             private Image _stripe;
+            private Image _border;
+            private Color _restFill;
             private Image _productIcon;
             private Text _name;
             private Text _stats;
@@ -866,6 +909,8 @@ namespace RecipePlanner.PhoneApp
             private Image _barTrack;
             private RectTransform _barFill;
             private Image _barFillImage;
+            private RectTransform _barGlow;
+            private Image _barGlowImage;
             private Image _baseIcon;
             private Text _unknownOrigin;
             private Text _overflow;
@@ -891,16 +936,35 @@ namespace RecipePlanner.PhoneApp
                 view.Root.pivot = new Vector2(0.5f, 1f);
 
                 view._stripe = view.Root.gameObject.AddComponent<Image>();
+                view._stripe.sprite = UiSkin.Body;
+                view._stripe.type = Image.Type.Sliced;
 
                 // Raycastable so the row can be hovered. Drag and scroll are not handled here, so
                 // they still bubble up to the ScrollRect exactly as before.
                 view._stripe.raycastTarget = true;
+
+                // Each row is a card with its own outline. Banding alone separated rows well enough
+                // on a grey panel, but on near-black the two alternating fills are almost the same
+                // colour and the list turns into one continuous slab.
+                var cardBorder = CreateChild(view.Root, "CardBorder");
+                Anchor(cardBorder, Vector2.zero, Vector2.one, new Vector2(0f, 1f), new Vector2(0f, -1f));
+                view._border = cardBorder.gameObject.AddComponent<Image>();
+                view._border.sprite = UiSkin.Ring;
+                view._border.type = Image.Type.Sliced;
+                view._border.color = CardBorder;
+                view._border.raycastTarget = false;
 
                 // Hover previews the recipe's effects; clicking pins the card so it survives the
                 // pointer moving away — useful when reading a long effect list or comparing rows.
                 var hover = HoverGlow.Attach(view.Root.gameObject, null, Transparent, Transparent);
                 hover.HoverChanged += isHot =>
                 {
+                    // The row lights itself. Hover has to be visible on the row the pointer is
+                    // actually over — the effects card appears beside it, which tells you a card
+                    // opened but not which row it belongs to.
+                    view._border.color = isHot ? Neon : CardBorder;
+                    view._stripe.color = isHot ? CardFillHot : view._restFill;
+
                     if (view._entry == null) return;
                     if (isHot) view._screen.ShowEffects(view.Root, view._entry, view._font);
                     else if (view._screen._pinnedProductId == null) view._screen.HideEffects();
@@ -1004,6 +1068,8 @@ namespace RecipePlanner.PhoneApp
                 track.offsetMax = new Vector2(-48f, 4f);
 
                 _barTrack = track.gameObject.AddComponent<Image>();
+                _barTrack.sprite = UiSkin.Pill;
+                _barTrack.type = Image.Type.Sliced;
                 _barTrack.color = BarTrack;
                 _barTrack.raycastTarget = false;
 
@@ -1016,7 +1082,23 @@ namespace RecipePlanner.PhoneApp
                 _barFill.offsetMax = Vector2.zero;
 
                 _barFillImage = _barFill.gameObject.AddComponent<Image>();
+                _barFillImage.sprite = UiSkin.Pill;
+                _barFillImage.type = Image.Type.Sliced;
                 _barFillImage.raycastTarget = false;
+
+                // A glow tracking the fill. On a near-black row a thin bar barely registers
+                // peripherally, and this meter's whole job is to be readable without being read.
+                _barGlow = CreateChild(track, "FillGlow");
+                _barGlow.anchorMin = new Vector2(0f, 0f);
+                _barGlow.anchorMax = new Vector2(0f, 1f);
+                _barGlow.offsetMin = new Vector2(-5f, -5f);
+                _barGlow.offsetMax = new Vector2(5f, 5f);
+                _barGlow.SetAsFirstSibling();
+
+                _barGlowImage = _barGlow.gameObject.AddComponent<Image>();
+                _barGlowImage.sprite = UiSkin.Glow;
+                _barGlowImage.type = Image.Type.Sliced;
+                _barGlowImage.raycastTarget = false;
             }
 
             private void BindAddiction(float addictiveness)
@@ -1032,6 +1114,14 @@ namespace RecipePlanner.PhoneApp
                 _barFill.offsetMin = Vector2.zero;
                 _barFill.offsetMax = Vector2.zero;
                 _barFillImage.color = colour;
+
+                _barGlow.anchorMax = new Vector2(value, 1f);
+                _barGlow.offsetMin = new Vector2(-5f, -5f);
+                _barGlow.offsetMax = new Vector2(5f, 5f);
+
+                // Brighter as it fills, and gone entirely at zero — an empty meter that still glows
+                // looks like it is lit for a reason.
+                _barGlowImage.color = new Color(colour.r, colour.g, colour.b, value <= 0f ? 0f : 0.10f + value * 0.28f);
 
                 // A product with no addictiveness shows no meter at all rather than an empty
                 // track, which would read as "measured at zero" instead of "nothing to show".
@@ -1137,7 +1227,11 @@ namespace RecipePlanner.PhoneApp
             {
                 _entry = entry;
 
-                _stripe.color = ordinal % 2 == 0 ? RowStripe : Transparent;
+                // Remembered, because hover overwrites the fill and has to put back the right one —
+                // rows alternate, so there is no single colour to restore to.
+                _restFill = ordinal % 2 == 0 ? CardFill : CardFillAlt;
+                _stripe.color = _restFill;
+                _border.color = CardBorder;
 
                 Apply(_productIcon, IconSource.Product(entry.ProductId));
 
@@ -1257,11 +1351,11 @@ namespace RecipePlanner.PhoneApp
             button.offsetMax = new Vector2(x + width, -2f);
 
             var image = button.gameObject.AddComponent<Image>();
-            StyleRoundedButton(button, image);
+            StyleRoundedButton(button, image, pill: true);
 
             var text = CreateText(button, "Label", label, font, ToolFontSize, FontStyle.Normal);
             text.alignment = TextAnchor.MiddleCenter;
-            text.color = NameText;
+            text.color = ChainText;
             Anchor(text.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             var clickable = button.gameObject.AddComponent<Button>();
@@ -1269,7 +1363,9 @@ namespace RecipePlanner.PhoneApp
             clickable.colors = ButtonColours;
             clickable.onClick.AddListener(() => { try { onClick(); } catch { } });
 
-            x += width + 4f;
+            _pills[text] = new ToolPill { Body = image, Label = text };
+
+            x += width + 6f;
             return text;
         }
 
@@ -1306,8 +1402,11 @@ namespace RecipePlanner.PhoneApp
             foreach (var label in _sortLabels)
             {
                 var isActive = label.name == "Sort_" + _query.Sort;
-                label.color = isActive ? HeaderText : ChainText;
-                label.fontStyle = isActive ? FontStyle.Bold : FontStyle.Normal;
+
+                // Outlined rather than filled. One sort is always active, so a solid pill here
+                // would mean "a sort exists" — which is never news — and would compete with the
+                // filter, where solid genuinely means something is being excluded.
+                StylePill(label, isActive ? PillStyle.Outlined : PillStyle.Quiet);
 
                 var arrow = isActive ? (_query.Descending ? " ^" : " v") : "";
                 var baseLabel = label.text.TrimEnd(' ', '^', 'v');
@@ -1315,12 +1414,213 @@ namespace RecipePlanner.PhoneApp
             }
 
             if (_filterLabel != null)
+            {
                 _filterLabel.text = _query.FavouritesOnly ? "Favourites"
                                   : _query.ProducedOnly ? "Produced"
                                   : "All";
 
+                // Always solid: it always holds a value, and it is the control most likely to be
+                // hiding rows a player is looking for.
+                StylePill(_filterLabel, PillStyle.Solid);
+            }
+
             if (_hiddenLabel != null)
+            {
                 _hiddenLabel.text = _query.ShowHidden ? "Hidden: on" : "Hidden: off";
+                StylePill(_hiddenLabel, _query.ShowHidden ? PillStyle.Solid : PillStyle.Quiet);
+            }
+        }
+
+        // ---------- toolbar pills ----------
+
+        /// <summary>How loudly a pill states itself.</summary>
+        private enum PillStyle
+        {
+            /// <summary>Off, or simply one of several. Reads as background.</summary>
+            Quiet,
+
+            /// <summary>On, but unremarkable — the active choice among several that must have one.</summary>
+            Outlined,
+
+            /// <summary>On, and changing what the player is seeing. Impossible to miss.</summary>
+            Solid,
+        }
+
+        private sealed class ToolPill
+        {
+            public Image Body;
+            public Text Label;
+        }
+
+        private readonly Dictionary<Text, ToolPill> _pills = new Dictionary<Text, ToolPill>();
+
+        private void StylePill(Text label, PillStyle style)
+        {
+            ToolPill pill;
+            if (label == null || !_pills.TryGetValue(label, out pill)) return;
+
+            switch (style)
+            {
+                case PillStyle.Solid:
+                    pill.Body.color = Neon;
+                    // Dark text on the accent, not white: white on this green is barely legible,
+                    // and the app's own background is the one colour guaranteed to contrast with it.
+                    pill.Label.color = AppBackground;
+                    pill.Label.fontStyle = FontStyle.Bold;
+                    break;
+
+                case PillStyle.Outlined:
+                    pill.Body.color = TileFillSelected;
+                    pill.Label.color = Neon;
+                    pill.Label.fontStyle = FontStyle.Bold;
+                    break;
+
+                default:
+                    pill.Body.color = ButtonIdle;
+                    pill.Label.color = ChainText;
+                    pill.Label.fontStyle = FontStyle.Normal;
+                    break;
+            }
+        }
+
+        // ---------- header ----------
+
+        private const float HeaderMarkWidth = 62f;
+
+        private Text _captionCount;
+        private Text _headerCount;
+        private Text _headerProfile;
+        private Image _headerMark;
+        private Image _statusDot;
+        private Text _statusLabel;
+
+        /// <summary>
+        /// The app's mark: a bordered tile holding the game's own bud sprite.
+        ///
+        /// The sprite is filled in on refresh rather than here, because it comes from the loaded
+        /// save's first base product — there is no catalogue yet at build time, and hard-coding an
+        /// id would break on a game that adds or renames a strain.
+        /// </summary>
+        private void BuildHeaderMark(RectTransform titleBar, Font font)
+        {
+            var tile = CreateChild(titleBar, "Mark");
+            tile.anchorMin = new Vector2(0f, 0.5f);
+            tile.anchorMax = new Vector2(0f, 0.5f);
+            tile.pivot = new Vector2(0f, 0.5f);
+            tile.sizeDelta = new Vector2(38f, 38f);
+            tile.anchoredPosition = new Vector2(14f, 0f);
+
+            var fill = tile.gameObject.AddComponent<Image>();
+            fill.sprite = UiSkin.Body;
+            fill.type = Image.Type.Sliced;
+            fill.color = TileFillSelected;
+            fill.raycastTarget = false;
+
+            var border = CreateChild(tile, "Border");
+            Anchor(border, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var borderImage = border.gameObject.AddComponent<Image>();
+            borderImage.sprite = UiSkin.Ring;
+            borderImage.type = Image.Type.Sliced;
+            borderImage.color = NeonDim;
+            borderImage.raycastTarget = false;
+
+            var icon = CreateChild(tile, "Icon");
+            Anchor(icon, Vector2.zero, Vector2.one, new Vector2(6f, 6f), new Vector2(-6f, -6f));
+            _headerMark = icon.gameObject.AddComponent<Image>();
+            _headerMark.preserveAspect = true;
+            _headerMark.raycastTarget = false;
+            _headerMark.color = Transparent;
+        }
+
+        /// <summary>
+        /// A pip saying whether anything is actually being recorded.
+        ///
+        /// It reports real state rather than decoration: green once a save has resolved to a
+        /// profile, grey before that. A permanently-green "Synced" light that means nothing would
+        /// be worse than no light, because a player would trust it.
+        /// </summary>
+        private void BuildStatusPip(RectTransform titleBar, Font font)
+        {
+            var dot = CreateChild(titleBar, "StatusDot");
+            dot.anchorMin = new Vector2(1f, 0.5f);
+            dot.anchorMax = new Vector2(1f, 0.5f);
+            dot.pivot = new Vector2(1f, 0.5f);
+            dot.sizeDelta = new Vector2(9f, 9f);
+            dot.anchoredPosition = new Vector2(-84f, 0f);
+
+            _statusDot = dot.gameObject.AddComponent<Image>();
+            _statusDot.sprite = UiSkin.Pill;
+            _statusDot.type = Image.Type.Sliced;
+            _statusDot.color = StatText;
+            _statusDot.raycastTarget = false;
+
+            _statusLabel = CreateText(titleBar, "StatusLabel", "", font, TitleFontSize - 10, FontStyle.Normal);
+            _statusLabel.color = StatText;
+            _statusLabel.alignment = TextAnchor.MiddleRight;
+            Anchor(_statusLabel.rectTransform, new Vector2(0.5f, 0f), new Vector2(1f, 1f),
+                   Vector2.zero, new Vector2(-14f, 0f));
+        }
+
+        /// <summary>
+        /// Lays the three header runs end to end.
+        ///
+        /// Measured rather than guessed: <c>preferredWidth</c> is the only way to know where one
+        /// run finishes in a proportional font, and a fixed offset would either overlap on a long
+        /// character name or leave a gap on a short one.
+        /// </summary>
+        private void LayoutHeader(string count, string profile)
+        {
+            if (_header == null) return;
+
+            _header.text = "Cookbook";
+            var x = HeaderMarkWidth + _header.preferredWidth + 10f;
+
+            _headerCount.text = count ?? "";
+            _headerCount.rectTransform.offsetMin = new Vector2(x, _headerCount.rectTransform.offsetMin.y);
+            x += _headerCount.preferredWidth + 8f;
+
+            _headerProfile.text = profile ?? "";
+            _headerProfile.rectTransform.offsetMin = new Vector2(x, _headerProfile.rectTransform.offsetMin.y);
+        }
+
+        /// <summary>
+        /// Borrows the first section's bud sprite for the app mark. Read from the model rather than
+        /// named, so a game update that adds a strain still produces an icon — and one that renames
+        /// them does not leave a blank tile.
+        /// </summary>
+        private void RefreshHeaderMark()
+        {
+            if (_headerMark == null || _headerMark.sprite != null) return;
+            if (_model?.Sections == null) return;
+
+            foreach (var section in _model.Sections)
+            {
+                if (section == null || string.IsNullOrEmpty(section.RootProductId)) continue;
+
+                var sprite = IconSource.Product(section.RootProductId);
+                if (sprite == null) continue;
+
+                _headerMark.sprite = sprite;
+                _headerMark.color = Color.white;
+                return;
+            }
+        }
+
+        /// <summary>Same measured run-on as the header: the tally starts where the title ends.</summary>
+        private void LayoutCaption(string title, string count)
+        {
+            if (_caption == null) return;
+
+            _caption.text = title ?? "";
+            _captionCount.text = count ?? "";
+            _captionCount.rectTransform.offsetMin =
+                new Vector2(12f + _caption.preferredWidth + 12f, _captionCount.rectTransform.offsetMin.y);
+        }
+
+        private void SetStatus(bool live, string label)
+        {
+            if (_statusDot != null) _statusDot.color = live ? Neon : StatText;
+            if (_statusLabel != null) _statusLabel.text = label;
         }
 
         // ---------- mix guide ----------
@@ -1607,7 +1907,7 @@ namespace RecipePlanner.PhoneApp
         /// lifted by <see cref="HoverGlow"/>, which drives it in step with uGUI's own colour tint
         /// on the body — tinting only the body makes it pop while the glow stays flat.
         /// </summary>
-        private static Image StyleRoundedButton(RectTransform target, Image body)
+        private static Image StyleRoundedButton(RectTransform target, Image body, bool pill = false)
         {
             var glowRect = CreateChild(target, "Glow");
             Anchor(glowRect, Vector2.zero, Vector2.one,
@@ -1622,9 +1922,29 @@ namespace RecipePlanner.PhoneApp
             glow.raycastTarget = false;   // never steal the click from the button underneath it
             glow.color = GlowRest;
 
-            body.sprite = UiSkin.Body;
+            body.sprite = pill ? UiSkin.Pill : UiSkin.Body;
             body.type = Image.Type.Sliced;
             body.color = ButtonIdle;
+
+            // The outline carries the shape at rest; the fill is nearly the background colour, so
+            // without it a toolbar of unselected pills would be invisible against the panel.
+            var border = CreateChild(target, "Border");
+            Anchor(border, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var borderImage = border.gameObject.AddComponent<Image>();
+            borderImage.sprite = pill ? UiSkin.Pill : UiSkin.Ring;
+            borderImage.type = Image.Type.Sliced;
+            borderImage.color = CardBorder;
+            borderImage.raycastTarget = false;
+
+            // A pill has no ring sprite of its own, so its border is a slightly larger pill sitting
+            // behind the fill — the fill covers all but a hairline of it.
+            if (pill)
+            {
+                border.SetSiblingIndex(1);
+                Anchor(border, Vector2.zero, Vector2.one,
+                       new Vector2(-1.2f, -1.2f), new Vector2(1.2f, 1.2f));
+                borderImage.color = new Color(1f, 1f, 1f, 0.10f);
+            }
 
             HoverGlow.Attach(target.gameObject, glow, GlowRest, GlowHot);
             return glow;
@@ -1653,28 +1973,47 @@ namespace RecipePlanner.PhoneApp
         // glow should read as a soft edge rather than a light source; only hover should announce
         // itself. A row of permanently glowing buttons is noise, and noise everywhere is the same
         // as nowhere — nothing stands out when the pointer actually lands.
-        private static readonly Color GlowRest = new Color(0.35f, 0.85f, 0.45f, 0.07f);
-        private static readonly Color GlowHot = new Color(0.42f, 1f, 0.55f, 0.26f);
+        // One accent, used everywhere something is active, selected or worth money. A single strong
+        // colour on near-black is what makes the layout readable at a glance — every extra hue
+        // competes with it and the eye stops knowing which one means "look here".
+        private static readonly Color Neon = new Color(0.24f, 0.92f, 0.44f, 1f);
+        private static readonly Color NeonDim = new Color(0.24f, 0.92f, 0.44f, 0.30f);
+
+        private static readonly Color GlowRest = new Color(0.24f, 0.92f, 0.44f, 0.05f);
+        private static readonly Color GlowHot = new Color(0.30f, 1f, 0.50f, 0.30f);
 
         private static readonly Color Transparent = new Color(0f, 0f, 0f, 0f);
-        private static readonly Color ButtonIdle = new Color(1f, 1f, 1f, 0.10f);
-        private static readonly Color RowEdge = new Color(1f, 1f, 1f, 0.055f);
 
-        private static readonly Color TileBorderIdle = new Color(1f, 1f, 1f, 0.16f);
-        private static readonly Color TileBorderSelected = new Color(1f, 0.84f, 0.45f, 0.95f);
-        private static readonly Color TileFillIdle = new Color(1f, 1f, 1f, 0.06f);
-        private static readonly Color TileFillSelected = new Color(1f, 0.84f, 0.45f, 0.14f);
+        private static readonly Color AppBackground = new Color(0.024f, 0.035f, 0.028f, 1f);
+        private static readonly Color HeaderFill = new Color(0.042f, 0.062f, 0.050f, 1f);
 
-        private static readonly Color HeaderText = new Color(1f, 0.84f, 0.45f, 1f);
-        private static readonly Color NameText = new Color(0.95f, 0.95f, 0.97f, 1f);
-        private static readonly Color ChainText = new Color(0.62f, 0.66f, 0.72f, 1f);
-        private static readonly Color StatText = new Color(0.55f, 0.78f, 0.62f, 1f);
-        private static readonly Color PriceText = new Color(0.45f, 0.95f, 0.55f, 1f);
-        private static readonly Color BarLow = new Color(0.92f, 0.78f, 0.42f, 1f);
-        private static readonly Color BarHigh = new Color(0.94f, 0.36f, 0.31f, 1f);
-        private static readonly Color BarTrack = new Color(1f, 1f, 1f, 0.07f);
-        private static readonly Color RowStripe = new Color(1f, 1f, 1f, 0.045f);
-        private static readonly Color Favourite = new Color(1f, 0.80f, 0.30f, 1f);
+        private static readonly Color CardFill = new Color(0.055f, 0.078f, 0.064f, 1f);
+        private static readonly Color CardFillAlt = new Color(0.045f, 0.065f, 0.053f, 1f);
+        private static readonly Color CardBorder = new Color(1f, 1f, 1f, 0.07f);
+        private static readonly Color CardFillHot = new Color(0.075f, 0.115f, 0.090f, 1f);
+
+        private static readonly Color ButtonIdle = new Color(0.075f, 0.105f, 0.086f, 1f);
+        private static readonly Color RowEdge = new Color(1f, 1f, 1f, 0.04f);
+
+        private static readonly Color TileBorderIdle = new Color(1f, 1f, 1f, 0.09f);
+        private static readonly Color TileBorderSelected = Neon;
+        private static readonly Color TileFillIdle = new Color(0.055f, 0.078f, 0.064f, 1f);
+        private static readonly Color TileFillSelected = new Color(0.09f, 0.20f, 0.12f, 1f);
+
+        private static readonly Color HeaderText = Neon;
+        private static readonly Color TitleText = new Color(0.94f, 0.97f, 0.95f, 1f);
+        private static readonly Color NameText = new Color(0.93f, 0.96f, 0.94f, 1f);
+        private static readonly Color ChainText = new Color(0.48f, 0.56f, 0.51f, 1f);
+        private static readonly Color StatText = new Color(0.52f, 0.62f, 0.55f, 1f);
+        private static readonly Color PriceText = Neon;
+
+        // The meter is one colour now. It was a yellow-to-red ramp, which read as a warning — but
+        // addictiveness is not a hazard in this game, it is a selling point, so a rising green bar
+        // says "more of the thing you want" rather than "careful".
+        private static readonly Color BarFill = Neon;
+        private static readonly Color BarTrack = new Color(1f, 1f, 1f, 0.05f);
+        private static readonly Color RowStripe = new Color(1f, 1f, 1f, 0.02f);
+        private static readonly Color Favourite = new Color(1f, 0.82f, 0.32f, 1f);
 
         // Green, and much softer than the first attempt: the card sits over the list, so a strong
         // halo bleeds into the rows behind it and makes both harder to read.
@@ -1711,14 +2050,19 @@ namespace RecipePlanner.PhoneApp
         }
 
         /// <summary>
-        /// Amber through to red as a product gets more addictive.
+        /// One green, brightening slightly as it fills.
         ///
-        /// Deliberately nowhere near the money green: the two sit on the same row, and a meter that
-        /// starts out the same colour as the price implies a relationship between them that does
-        /// not exist.
+        /// This replaced an amber-to-red ramp that existed for a specific reason: the meter shares
+        /// a row with the price, and matching its colour implies a relationship between the two
+        /// that does not exist. That objection is still true — it is simply outweighed. A red bar
+        /// reads as a warning, and addictiveness in this game is a selling point rather than a
+        /// hazard, so the old colour was miscommunicating something worse.
+        ///
+        /// The confusion is kept small by form rather than hue: the price is large bold text, the
+        /// meter is a thin bar, and nothing else on the row is shaped like either.
         /// </summary>
         private static Color AddictionColour(float addictiveness) =>
-            Color.Lerp(BarLow, BarHigh, Mathf.Clamp01(addictiveness));
+            Color.Lerp(new Color(0.20f, 0.72f, 0.36f, 1f), BarFill, Mathf.Clamp01(addictiveness));
 
         private static string DescribeStats(CookbookEntry entry)
         {
