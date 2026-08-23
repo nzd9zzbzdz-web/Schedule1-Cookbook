@@ -362,9 +362,9 @@ with no extra steps.
   Every Nexus permission field must be set to **No** to match — a page that contradicts its own
   licence is what gets argued about later.
   *(MIT was in place for commits `8b4b61c` through `e0c703b`. See the note under R0.)*
-- **Version** — `1.0.0`, in `MelonInfo`, the Nexus draft and the archive name. Deliberately not
-  `1.0.0`: R1, R5 and R6 are unverified, so calling it 1.0 would be a claim not yet earned. Bump to
-  `1.0.0` when they pass, and tag the commit to match.
+- **Version** — `1.0.0`, in `MelonInfo`, the Nexus draft and the archive name. Held at `0.9.0`
+  while R1, R5 and R6 were open; R1 closed, R5 is now confirmed against real save data, and R6 is
+  answered honestly on the page rather than claimed. Tag the commit to match.
 - **`Newtonsoft.Json`** — **verified, not assumed.** MelonLoader 0.7.3 ships `13.0.4` in all three
   host folders (`net35`, `net472`, `net6`), and the game carries its own copy in
   `Schedule I_Data/Managed`. We compile against `13.0.3` and do not ship it. Nothing to do.
@@ -389,7 +389,7 @@ Current output: `release/Schedule-I-Cookbook-1.0.0.zip`, 88.8 KB, containing `LI
 - Lead the description with the strongest claim you have, which is unusual for this genre:
   **tracking is automatic and never writes to your save**. Most competing tools ask the player to
   log cooks by hand.
-- Mention the guardrails — `SymbolGuard` verifies 13/13 hooks and disables tracking rather than
+- Mention the guardrails — `SymbolGuard` verifies all 30 hooks and disables tracking rather than
   recording wrong numbers after a game update. That is a real differentiator on a game that patches
   often.
 - Set expectations for what is *not* built yet, per R2. Under-promising here costs you nothing and
