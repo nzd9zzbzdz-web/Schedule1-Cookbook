@@ -13,7 +13,7 @@ still unwritten is multiplayer (R6).
 | Field | Value |
 |---|---|
 | **Name** | Schedule I Cookbook |
-| **Summary** | An automatic cookbook and production record for your mixes. Never writes to your save. Requires the `alternate` branch. |
+| **Summary** | An automatic cookbook, production record and mixing guide, read from your own save. Never writes to it. Requires the `alternate` branch. |
 | **Category** | Miscellaneous (or Gameplay, if Nexus has no better fit for Schedule I) |
 | **Version** | 0.9.0 |
 | **Requirements** | MelonLoader v0.7.3 · Schedule I on the **`alternate` (Mono) Steam branch** |
@@ -128,23 +128,33 @@ This mod keeps the record for you, automatically.
 mixing-completion events, so every batch is captured as it happens — including the ones your
 employees cook while you are somewhere else.
 
-### What it does
+### Three screens on your phone
 
-- **A cookbook on your phone.** Every recipe you have discovered, grouped by strain, with the full
-  ingredient chain that leads to each one — so you can see how a product was actually built up,
-  step by step.
-- **Sort seven ways** — name, units made, value, most recent, chain length, addictiveness — with
-  favourites pinned to the top.
-- **Hide the clutter.** Hiding a recipe removes it from the list only. It stays in the game, and its
-  history and statistics are untouched.
-- **Automatic production history.** Units, batches, per-product breakdown, ingredient usage.
-- **Recipes discover themselves.** Invent a mix in-game and it appears in the cookbook unprompted.
-- **Employee cooks are tracked but kept separate**, so your personal totals stay yours.
-- **A readable cookbook outside the game.** Your recipes, chains and totals are also written to a
-  `cookbook.md` file you can open in any editor, keep, or share.
-- **A mixing guide, read out of YOUR save.** What each ingredient adds, what it turns existing
-  effects into, and every route to a given effect. Schedule I can randomise its mix maps per save,
-  so a chart copied off a wiki is wrong for some players — this one is read from your own game.
+**📖 Cookbook** — every recipe you have discovered, grouped by strain, each showing the full
+ingredient chain that built it. Hover a recipe to see all its effects. Sort seven ways — name, units
+made, value, most recent, chain length, addictiveness — filter to favourites or to what you have
+actually cooked, and hide the ones you are done with. Hiding is display only: the recipe stays in
+the game and keeps its history.
+
+**📊 Statistics** — units, batches, value, cost and profit for the character you are playing. A
+breakdown by drug type, your most-produced products, your most-used ingredients, and your records.
+Cooks done by your employees are tracked but kept out of your personal totals, and the screen says
+how many so a lower number than you expected never looks like a miscount.
+
+**🌿 Mix Guide** — what every ingredient actually does. Pick an ingredient and see the effect it
+adds and what it turns each existing effect into. Or pick an effect you want and see every route to
+it — which ingredients add it outright, and which combinations convert into it.
+
+That last one is read out of **your own save**, not copied from a wiki. Schedule I can randomise its
+mix maps per game, so a static chart is simply wrong for some players. This one asks your game.
+
+### And it keeps the record for you
+
+- **Recipes discover themselves.** Invent a mix in-game and it appears in the cookbook unprompted,
+  placed under its strain with its full ancestry — no saving or reloading needed.
+- **Nothing is ever logged by hand.** The mod hooks the game's own mixing-completion events.
+- **A readable copy outside the game.** Everything is also written to a `cookbook.md` you can open
+  in any editor, keep, or share.
 
 ### It will not touch your save
 
@@ -160,7 +170,7 @@ trustworthy.
 Schedule I updates often, and mods that read the game's internals break when it does. Most break
 silently, and quietly record nonsense.
 
-This one checks all 22 of the game symbols it depends on **before** it patches anything. If even
+This one checks all 30 of the game symbols it depends on **before** it patches anything. If even
 one has moved, it disables tracking, says so in the log, and records nothing. Wrong statistics are
 worse than no statistics.
 
@@ -201,8 +211,9 @@ Full guide, including uninstall and troubleshooting: [06-INSTALL.md](06-INSTALL.
 
 Being straight about scope, because the name used to promise more:
 
-- **No prediction.** The mixing guide tells you what each ingredient does, but the mod will not
-  predict a whole mix's final effects before you cook it, or tell you what to make next.
+- **No full-mix prediction.** The Mix Guide tells you what any one ingredient does to any one
+  effect, which covers most planning. What it will not do is simulate a whole recipe end to end and
+  hand you the finished effect list before you cook it.
 - **No recipe optimisation or comparison.**
 - **No search box** in the cookbook. A text field inside the running game fights your movement keys
   for keyboard focus. Sorting and filters cover the same ground; search comes back when it can be
@@ -211,7 +222,28 @@ Being straight about scope, because the name used to promise more:
   table it leaves money out entirely rather than showing a confident `$0`; everything else still
   works.
 
-### Multiplayer
+### Multiplayer — honest answer
+
+Use this until R6 is tested, then replace it with what you actually saw. Silence is worse than an
+admission: "does this work in co-op?" is the question that gets asked either way, and answering it
+on the page beats answering it forty times in the comments.
+
+> **Not fully tested yet.** Here is what the mod is built to do, and what I have not confirmed.
+>
+> Each player's copy records to their own machine — nothing is shared or synced between you. Cooks
+> done by another player are recorded but deliberately kept out of your personal totals, the same
+> way employee cooks are, so your numbers stay yours.
+>
+> What I have not verified is how that behaves as a joining client rather than as the host. It
+> should be fine; I have not proven it. If you play co-op I would genuinely like to hear what you
+> see — a log and a sentence is plenty.
+
+Two things to actually check when you can, because they are the ones most likely to be wrong:
+
+1. **On a client, does another player's cook get recorded as yours?** The game dispatches the
+   completion event to every machine, so a client's mod sees the host's batches too. Attribution is
+   supposed to exclude them.
+2. **Does the host see a guest's cook as `remote` rather than `local`?**
 
 <!-- TODO: fill in after R6. Do not publish with this section unwritten — it will be the first
      question in the comments. Test as host and as client, then state plainly what each one gets. -->
@@ -220,15 +252,23 @@ Being straight about scope, because the name used to promise more:
 
 ## Screenshots needed
 
-The page must not go up without these — the phone app is the entire selling point and there is
-currently not one image of it.
+The app is the entire selling point, and a mod page with no pictures of it gets scrolled past. In
+rough order of how much work each one does for you:
 
-1. The cookbook list, showing several strain sections.
-2. A strain section expanded, showing the ingredient chain for one product.
-3. The toolbar, showing sort and filter controls.
-4. The statistics view.
-5. Optional: the MelonLoader console showing a `Production Detected` block — proof of the automatic
-   tracking, which is the hardest claim to believe from text alone.
+1. **A strain filtered to one section, showing deep ingredient chains.** This is the shot. A product
+   four levels down with its whole ancestry visible is the one thing no other tool shows, and it is
+   immediately obvious what it means without reading a word.
+2. **The Mix Guide, on the "By effect" tab, with a real effect selected** — the routes list is the
+   answer to the question players actually arrive with.
+3. **The Statistics screen**, scrolled to show the by-type bars.
+4. **The cookbook at ALL STRAINS**, for the sense of scale.
+5. **The effects card open over a row** — it shows the hover interaction, which is otherwise
+   invisible in a still.
+6. Optional: the MelonLoader console showing a `Production Detected` block. It is proof of the
+   automatic tracking, which is the hardest claim to believe from text alone.
+
+Put **1** first in the gallery. Nexus shows the first image as the card thumbnail, and that is the
+one deciding whether anyone clicks at all.
 
 ---
 
@@ -236,10 +276,21 @@ currently not one image of it.
 
 First public release.
 
-- Automatic production tracking via the game's own mixing-completion events
-- Production history that survives restarts, with employee cooks attributed separately
-- Automatic recipe discovery
-- Cookbook phone app with strain grouping, ingredient chains, 7 sort orders, filters, favourites
-  and hiding (`alternate` branch)
-- Lifetime statistics
-- 22/22 hook verification that fails closed on a game update
+**On your phone**
+
+- Cookbook — recipes grouped by strain, full ingredient chains, effects on hover, 7 sort orders,
+  filters and hiding
+- Statistics — lifetime totals, value and profit, breakdown by drug type, top products and
+  ingredients, records, and separately-tracked employee production
+- Mix Guide — what each ingredient adds and converts, and every route to a given effect, read from
+  your own save rather than a fixed table
+
+**Underneath**
+
+- Automatic production tracking via the game's own mixing-completion events; nothing is logged by hand
+- History that survives restarts, with employee cooks recorded but kept out of personal totals
+- Recipes discover themselves and are placed under their strain immediately, with no save needed
+- A readable `cookbook.md` export written alongside the data
+- Never writes to your game save
+- 30/30 symbol verification that disables tracking rather than recording wrong numbers after a game
+  update

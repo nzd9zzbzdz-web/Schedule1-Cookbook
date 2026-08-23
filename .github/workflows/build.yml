@@ -1,0 +1,41 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Core, Game, UI and the test project only.
+      #
+      # The solution is NOT built here on purpose. RecipePlanner.Mod needs MelonLoader and
+      # RecipePlanner.PhoneApp needs Assembly-CSharp, and neither can be committed — they are the
+      # game's, and shipping them would be redistributing it. Both projects are written to compile
+      # to an empty stub when their references are missing, so building the solution would "pass"
+      # by compiling nothing, which is worse than not trying.
+      #
+      # What this does cover is every line that decides anything: the tracker, statistics, storage,
+      # the recipe graph, the mixing solver and the reflection audit all live in the projects below.
+      - name: Test
+        run: dotnet test tests/RecipePlanner.Core.Tests/RecipePlanner.Core.Tests.csproj
+             --configuration Release
+             --verbosity minimal
+
+      # The hook table is checked against the SHIPPED game assemblies by tools/HookVerifier, which
+      # needs a copy of the game and so cannot run here. Re-run it locally after a game update:
+      #
+      #   dotnet run --project tools/HookVerifier -- "<game>/Schedule I_Data/Managed"
+      #
+      # The reflection-audit test in the suite above covers the half that can be checked without the
+      # game: that every reflective read is at least declared in the hook table.
