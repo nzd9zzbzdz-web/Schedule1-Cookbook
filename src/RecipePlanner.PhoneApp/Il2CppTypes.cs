@@ -39,26 +39,27 @@ namespace RecipePlanner.PhoneApp
             _done = true;
 
 #if IL2CPP
-            // Registered one at a time, each reported separately. The three types are independent
-            // and only CookbookApp is expected to be difficult — knowing whether the two simple
-            // ones succeeded is what distinguishes "injection does not work here at all" from
-            // "injection works, but not over a generic base", and those need different fixes.
-            var app = Register<CookbookApp>("CookbookApp");
+            // CookbookApp is deliberately NOT registered. It cannot be: its base is
+            // App<CookbookApp>, and IL2CPP would need that class to exist before CookbookApp can be
+            // made, while that class cannot be made until CookbookApp exists. Confirmed on a
+            // running game — the two types below registered without complaint in the same pass that
+            // CookbookApp failed, which is what proved the problem is the generic base and not the
+            // mechanism. This branch uses CookbookEmbed instead, which subclasses nothing.
             var scroll = Register<SmoothScroll>("SmoothScroll");
             var glow = Register<HoverGlow>("HoverGlow");
 
-            _succeeded = app && scroll && glow;
+            _succeeded = scroll && glow;
 
             if (_succeeded)
             {
-                RecipePlannerUI.Log?.Info("IL2CPP type injection succeeded — the Cookbook app can be built.");
+                RecipePlannerUI.Log?.Info("IL2CPP type injection succeeded — the Cookbook panel can be built.");
             }
             else
             {
                 RecipePlannerUI.Log?.Error(
-                    $"IL2CPP type injection failed (CookbookApp={app}, SmoothScroll={scroll}, " +
-                    $"HoverGlow={glow}), so the Cookbook app cannot be created on this branch. " +
-                    "Production tracking is unaffected and keeps running.");
+                    $"IL2CPP type injection failed (SmoothScroll={scroll}, HoverGlow={glow}), so the " +
+                    "Cookbook cannot be built on this branch. Production tracking is unaffected " +
+                    "and keeps running.");
             }
 #else
             // Mono needs nothing: the runtime is already the one these types were compiled for.

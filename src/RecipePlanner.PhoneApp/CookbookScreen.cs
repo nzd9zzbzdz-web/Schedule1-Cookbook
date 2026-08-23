@@ -91,7 +91,8 @@ namespace RecipePlanner.PhoneApp
         /// Borrows a font already present in the phone UI. Falls back to Unity's built-in Arial,
         /// which always exists, rather than risking a null font and an invisible screen.
         /// </summary>
-        private static Font ResolveFont(RectTransform context)
+        /// <summary>Also used by the IL2CPP embed, which draws its button in the same skin.</summary>
+        internal static Font ResolveFont(RectTransform context)
         {
             if (_font != null) return _font;
 

@@ -32,7 +32,11 @@ namespace RecipePlanner.PhoneApp
     {
         private static bool _installed;
 
+#if IL2CPP
+        public static bool IsInstalled => CookbookEmbed.IsInstalled;
+#else
         public static bool IsInstalled => _installed && CookbookApp.Instance != null;
+#endif
 
         /// <summary>Idempotent: safe to call on every save load.</summary>
         public static bool TryInstall()
@@ -44,6 +48,15 @@ namespace RecipePlanner.PhoneApp
             // discovering AddComponent returned null leaves wreckage on the phone, whereas
             // declining up front costs the player nothing they were going to get anyway.
             if (!Il2CppTypes.EnsureRegistered()) return false;
+
+#if IL2CPP
+            // Different shape entirely on this branch: a panel inside the Products app rather than
+            // an app of its own, because App<T> cannot be subclassed here. See CookbookEmbed.
+            RecipePlannerUI.CacheInvalidated = IconSource.Clear;
+            UiSkin.Clear();
+            CookbookScreen.ForgetEffectColours();
+            return CookbookEmbed.TryInstall();
+#else
 
             // Bind the sprite cache to the seam the data builder raises. Done here rather than in a
             // static initialiser so it is set exactly when this assembly is known to have loaded —
@@ -94,6 +107,7 @@ namespace RecipePlanner.PhoneApp
                 RecipePlannerUI.Log?.Error("Could not install the Cookbook app: " + ex);
                 return false;
             }
+#endif
         }
 
         /// <summary>
