@@ -226,6 +226,13 @@ namespace RecipePlanner.Game.Binding
 
             var usedFallback = false;
 
+            // Keyed by ingredient+from+to, collecting which drug types it holds for. The four maps
+            // largely share geometry, so the same fact comes back from each one — emitting them
+            // straight out listed every transformation four times over, which buried the chart in
+            // its own repetition.
+            var seen = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            var order = new List<MixTransform>();
+
             foreach (var loaded in maps)
             {
                 var map = loaded.Model;
@@ -256,18 +263,37 @@ namespace RecipePlanner.Game.Binding
                         if (string.IsNullOrEmpty(landed)) continue;
                         if (string.Equals(landed, region.EffectId, StringComparison.OrdinalIgnoreCase)) continue;
 
-                        guide.Transforms.Add(new MixTransform
+                        var key = ingredient.Id + "|" + region.EffectId + "|" + landed;
+
+                        HashSet<string> drugTypes;
+                        if (!seen.TryGetValue(key, out drugTypes))
                         {
-                            IngredientId = ingredient.Id,
-                            FromEffectId = region.EffectId,
-                            ToEffectId = landed,
-                            DrugType = map.DrugType,
-                        });
+                            seen[key] = drugTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                            order.Add(new MixTransform
+                            {
+                                IngredientId = ingredient.Id,
+                                FromEffectId = region.EffectId,
+                                ToEffectId = landed,
+                            });
+                        }
+
+                        drugTypes.Add(map.DrugType);
                     }
                 }
             }
 
-            guide.TransformsAvailable = guide.Transforms.Count > 0;
+            // A transformation that holds on every map is simply how mixing works, and saying so on
+            // each row is noise. One that holds on only some is a genuine qualification and keeps
+            // its list.
+            foreach (var transform in order)
+            {
+                var key = transform.IngredientId + "|" + transform.FromEffectId + "|" + transform.ToEffectId;
+                var drugTypes = seen[key];
+                if (drugTypes.Count < maps.Count) transform.DrugType = string.Join(", ", ToArray(drugTypes));
+            }
+
+            guide.Transforms = order;
+            guide.TransformsAvailable = order.Count > 0;
             guide.TransformsApproximate = usedFallback;
         }
 
@@ -317,6 +343,15 @@ namespace RecipePlanner.Game.Binding
             return info;
         }
 
+
+        /// <summary>netstandard2.0 has no HashSet.ToArray overload that string.Join accepts here.</summary>
+        private static string[] ToArray(HashSet<string> set)
+        {
+            var array = new string[set.Count];
+            set.CopyTo(array);
+            Array.Sort(array, StringComparer.OrdinalIgnoreCase);
+            return array;
+        }
 
         private static float ReadFloat(object instance, string member, float fallback = 0f)
         {

@@ -31,6 +31,7 @@ namespace RecipePlanner.PhoneApp
         private const float ListWidth = 0.42f;
         private const float RowHeight = 34f;
         private const float RowGap = 2f;
+        private const float DetailLineHeight = 26f;
 
         private readonly RectTransform _root;
         private readonly Font _font;
@@ -43,7 +44,11 @@ namespace RecipePlanner.PhoneApp
         private Text _note;
 
         private readonly List<Row> _rows = new List<Row>();
-        private readonly List<Text> _detailLines = new List<Text>();
+        private readonly List<DetailRow> _detailRows = new List<DetailRow>();
+
+        private RectTransform _detailContent;
+        private int _detailIndex;
+        private float _detailY;
 
         private MixGuide _guide;
         private bool _byIngredient = true;
@@ -163,6 +168,37 @@ namespace RecipePlanner.PhoneApp
             _detailTitle.color = Accent;
             Anchor(_detailTitle.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f),
                    new Vector2(14f, -42f), new Vector2(-14f, -10f));
+
+            // The body scrolls. A popular effect can be reachable a dozen ways, and a list that
+            // simply runs off the bottom of the panel hides exactly the routes a player is hunting.
+            var viewport = New(_detail, "DetailViewport");
+            Anchor(viewport, Vector2.zero, Vector2.one, new Vector2(2f, 6f), new Vector2(-2f, -46f));
+
+            var catcher = viewport.gameObject.AddComponent<Image>();
+            catcher.color = new Color(0f, 0f, 0f, 0f);
+            catcher.raycastTarget = true;
+
+            viewport.gameObject.AddComponent<RectMask2D>();
+
+            var scroll = viewport.gameObject.AddComponent<ScrollRect>();
+            scroll.horizontal = false;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 0f;
+
+            var smooth = viewport.gameObject.AddComponent<SmoothScroll>();
+            smooth.Target = scroll;
+            smooth.StepPixels = DetailLineHeight * 3f;
+            smooth.SmoothTime = 0.16f;
+
+            _detailContent = New(viewport, "Content");
+            _detailContent.anchorMin = new Vector2(0f, 1f);
+            _detailContent.anchorMax = new Vector2(1f, 1f);
+            _detailContent.pivot = new Vector2(0.5f, 1f);
+            _detailContent.anchoredPosition = Vector2.zero;
+            _detailContent.sizeDelta = Vector2.zero;
+
+            scroll.viewport = viewport;
+            scroll.content = _detailContent;
         }
 
         // ---- data ----
@@ -190,9 +226,10 @@ namespace RecipePlanner.PhoneApp
             if (_guide == null || !_guide.IsUsable)
             {
                 _note.text = "";
-                ShowDetail("Nothing to show",
-                    new[] { "The mixing data could not be read from the game.",
-                            "Load a save and open this again." });
+                BeginDetail("Nothing to show");
+                DetailLine("The mixing data could not be read from the game.", Muted);
+                DetailLine("Load a save and open this again.", Muted);
+                EndDetail();
                 _listContent.sizeDelta = Vector2.zero;
                 return;
             }
@@ -351,31 +388,39 @@ namespace RecipePlanner.PhoneApp
 
             if (ingredient == null) return;
 
-            var lines = new List<string>();
             var effect = _guide.Effect(ingredient.EffectId);
 
-            lines.Add("Costs $" + ingredient.Price.ToString("N2", CultureInfo.InvariantCulture));
-            lines.Add(effect != null ? "Adds: " + effect.Name : "Adds no effect of its own");
-            lines.Add("");
+            BeginDetail(ingredient.Name ?? ingredient.Id);
+            DetailLine("Costs $" + ingredient.Price.ToString("N2", CultureInfo.InvariantCulture), Muted);
 
-            var changes = _guide.ByIngredient(ingredientId);
+            DetailHeading("ADDS");
+            if (effect != null) DetailPair(effect.Name, Colour(effect), "", "", Primary);
+            else DetailLine("   nothing of its own", Muted);
+
             if (!_guide.TransformsAvailable)
             {
-                lines.Add("Transformations could not be read from this save.");
-            }
-            else if (changes.Count == 0)
-            {
-                lines.Add("Changes nothing that is already on the product.");
+                DetailHeading("CHANGES");
+                DetailLine("   transformations could not be read from this save", Muted);
             }
             else
             {
-                lines.Add("Changes what is already there:");
-                foreach (var change in changes)
-                    lines.Add("   " + _guide.EffectName(change.FromEffectId)
-                              + "  ->  " + _guide.EffectName(change.ToEffectId));
+                var changes = _guide.ByIngredient(ingredientId);
+                DetailHeadingPair("TURNS THIS", "INTO THIS");
+
+                if (changes.Count == 0)
+                {
+                    DetailLine("   nothing already on the product", Muted);
+                }
+                else
+                {
+                    foreach (var change in changes)
+                        DetailPair(_guide.EffectName(change.FromEffectId), EffectColour(change.FromEffectId),
+                                   "→",
+                                   _guide.EffectName(change.ToEffectId), EffectColour(change.ToEffectId));
+                }
             }
 
-            ShowDetail(ingredient.Name ?? ingredient.Id, lines);
+            EndDetail();
         }
 
         private void ShowEffect(string effectId)
@@ -383,48 +428,55 @@ namespace RecipePlanner.PhoneApp
             var effect = _guide.Effect(effectId);
             if (effect == null) return;
 
-            var lines = new List<string>();
-            if (!string.IsNullOrEmpty(effect.Description)) { lines.Add(effect.Description); lines.Add(""); }
+            BeginDetail(effect.Name ?? effect.Id);
 
-            lines.Add("Tier " + effect.Tier.ToString(CultureInfo.InvariantCulture)
-                      + "     Addictiveness " + Percent(effect.Addictiveness));
+            if (!string.IsNullOrEmpty(effect.Description)) DetailLine(effect.Description, Muted);
 
-            if (effect.ValueChange != 0 || effect.ValueMultiplier != 0f)
-                lines.Add("Value  x" + effect.ValueMultiplier.ToString("0.00", CultureInfo.InvariantCulture)
-                          + (effect.ValueChange != 0
-                             ? "   +$" + effect.ValueChange.ToString(CultureInfo.InvariantCulture)
-                             : ""));
-            lines.Add("");
+            DetailLine("Tier " + effect.Tier.ToString(CultureInfo.InvariantCulture)
+                       + "     Addictiveness " + Percent(effect.Addictiveness)
+                       + (effect.ValueMultiplier != 0f
+                          ? "     Value x" + effect.ValueMultiplier.ToString("0.00", CultureInfo.InvariantCulture)
+                          : "")
+                       + (effect.ValueChange != 0
+                          ? "  +$" + effect.ValueChange.ToString(CultureInfo.InvariantCulture)
+                          : ""),
+                       Primary);
 
             var routes = _guide.RoutesTo(effectId);
 
             if (routes.AddedDirectlyBy.Count > 0)
             {
-                lines.Add("Added directly by:");
+                DetailHeadingPair("ADD THIS", "COST");
                 foreach (var ingredient in routes.AddedDirectlyBy)
-                    lines.Add("   " + (ingredient.Name ?? ingredient.Id)
-                              + "   $" + ingredient.Price.ToString("N2", CultureInfo.InvariantCulture));
-                lines.Add("");
+                    DetailPair(ingredient.Name ?? ingredient.Id, Primary, "",
+                               "$" + ingredient.Price.ToString("N2", CultureInfo.InvariantCulture), Muted);
             }
 
             if (!_guide.TransformsAvailable)
             {
-                lines.Add("Transformations could not be read from this save.");
+                DetailHeading("OR CONVERT");
+                DetailLine("   transformations could not be read from this save", Muted);
             }
             else if (routes.ConvertedFrom.Count > 0)
             {
-                lines.Add("Or convert an existing effect:");
+                // Reads as "if you already have Calming, adding Mouth Wash gets you here".
+                DetailHeadingPair("IF YOU HAVE", "ADD THIS");
                 foreach (var route in routes.ConvertedFrom)
-                    lines.Add("   " + _guide.EffectName(route.FromEffectId)
-                              + "  +  " + IngredientName(route.IngredientId));
+                    DetailPair(_guide.EffectName(route.FromEffectId), EffectColour(route.FromEffectId),
+                               "+",
+                               IngredientName(route.IngredientId), Primary);
             }
             else if (routes.AddedDirectlyBy.Count == 0)
             {
-                lines.Add("Nothing in this save reaches this effect.");
+                DetailLine("", Muted, FontStyle.Normal, 8f);
+                DetailLine("Nothing in this save reaches this effect.", Muted);
             }
 
-            ShowDetail(effect.Name ?? effect.Id, lines);
+            EndDetail();
         }
+
+        /// <summary>An effect's own colour, by id, for the aligned columns.</summary>
+        private Color EffectColour(string effectId) => Colour(_guide.Effect(effectId));
 
         private string IngredientName(string id)
         {
@@ -434,33 +486,126 @@ namespace RecipePlanner.PhoneApp
             return id;
         }
 
-        private void ShowDetail(string title, IEnumerable<string> lines)
+        /// <summary>
+        /// One detail line, in three aligned columns.
+        ///
+        /// Three separate Texts rather than one padded string, because the phone's font is
+        /// proportional: "Calming    + Mouth Wash" and "Munchies   + Paracetamol" written as single
+        /// strings do not line up under each other, and a column that does not align is not a
+        /// column. Anchoring each part to a fixed fraction of the width is what makes the
+        /// relationship scannable rather than a wall of similar-looking sentences.
+        /// </summary>
+        private sealed class DetailRow
         {
-            _detailTitle.text = title;
-
-            var index = 0;
-            var y = -50f;
-
-            foreach (var line in lines)
-            {
-                var label = DetailLineAt(index++);
-                label.gameObject.SetActive(true);
-                label.text = line;
-                label.color = line.Contains("->") || line.StartsWith("   ") ? Primary : Muted;
-                Anchor(label.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f),
-                       new Vector2(14f, y - 22f), new Vector2(-14f, y));
-                y -= 24f;
-            }
-
-            for (var i = index; i < _detailLines.Count; i++) _detailLines[i].gameObject.SetActive(false);
+            public RectTransform Rect;
+            public Text Left;
+            public Text Middle;
+            public Text Right;
         }
 
-        private Text DetailLineAt(int index)
+        private void BeginDetail(string title)
         {
-            while (_detailLines.Count <= index)
-                _detailLines.Add(Label(_detail, "Line" + _detailLines.Count, "", 16, FontStyle.Normal));
+            _detailTitle.text = title;
+            _detailIndex = 0;
+            _detailY = 0f;
+        }
 
-            return _detailLines[index];
+        /// <summary>A full-width line: a paragraph, a heading, or a blank spacer.</summary>
+        private void DetailLine(string text, Color colour, FontStyle style = FontStyle.Normal, float height = DetailLineHeight)
+        {
+            var row = DetailRowAt(_detailIndex++);
+            Place(row, height);
+
+            row.Left.text = text ?? "";
+            row.Left.color = colour;
+            row.Left.fontStyle = style;
+            Anchor(row.Left.rectTransform, Vector2.zero, Vector2.one, new Vector2(14f, 0f), new Vector2(-12f, 0f));
+
+            row.Middle.text = "";
+            row.Right.text = "";
+        }
+
+        private void DetailHeading(string text)
+        {
+            DetailLine("", Muted, FontStyle.Normal, 8f);
+            DetailLine(text, Accent, FontStyle.Bold);
+        }
+
+        /// <summary>
+        /// A heading that labels both columns. Written as a pair rather than one padded string for
+        /// the same reason the rows are: a heading that does not sit over its column is worse than
+        /// no heading, because it implies an alignment that is not there.
+        /// </summary>
+        private void DetailHeadingPair(string left, string right)
+        {
+            DetailLine("", Muted, FontStyle.Normal, 8f);
+            DetailPair(left, Accent, "", right, Accent);
+        }
+
+        /// <summary>An aligned "this + that" or "this → that" pair, each side in its own colour.</summary>
+        private void DetailPair(string left, Color leftColour, string connector, string right, Color rightColour)
+        {
+            var row = DetailRowAt(_detailIndex++);
+            Place(row, DetailLineHeight);
+
+            row.Left.text = left;
+            row.Left.color = leftColour;
+            row.Left.fontStyle = FontStyle.Bold;
+            Anchor(row.Left.rectTransform, new Vector2(0f, 0f), new Vector2(0.46f, 1f),
+                   new Vector2(26f, 0f), Vector2.zero);
+
+            row.Middle.text = connector;
+            row.Middle.color = Muted;
+            Anchor(row.Middle.rectTransform, new Vector2(0.46f, 0f), new Vector2(0.54f, 1f),
+                   Vector2.zero, Vector2.zero);
+
+            row.Right.text = right;
+            row.Right.color = rightColour;
+            row.Right.fontStyle = FontStyle.Bold;
+            Anchor(row.Right.rectTransform, new Vector2(0.54f, 0f), Vector2.one,
+                   Vector2.zero, new Vector2(-12f, 0f));
+        }
+
+        private void EndDetail()
+        {
+            for (var i = _detailIndex; i < _detailRows.Count; i++)
+                _detailRows[i].Rect.gameObject.SetActive(false);
+
+            _detailContent.sizeDelta = new Vector2(0f, Mathf.Max(0f, -_detailY));
+        }
+
+        private void Place(DetailRow row, float height)
+        {
+            row.Rect.gameObject.SetActive(true);
+            row.Rect.sizeDelta = new Vector2(row.Rect.sizeDelta.x, height);
+            row.Rect.anchoredPosition = new Vector2(0f, _detailY);
+            _detailY -= height;
+        }
+
+        private DetailRow DetailRowAt(int index)
+        {
+            while (_detailRows.Count <= index)
+            {
+                var rect = New(_detailContent, "Detail" + _detailRows.Count);
+                rect.anchorMin = new Vector2(0f, 1f);
+                rect.anchorMax = new Vector2(1f, 1f);
+                rect.pivot = new Vector2(0.5f, 1f);
+                rect.offsetMin = new Vector2(0f, rect.offsetMin.y);
+                rect.offsetMax = new Vector2(0f, rect.offsetMax.y);
+
+                var row = new DetailRow
+                {
+                    Rect = rect,
+                    Left = Label(rect, "A", "", 16, FontStyle.Normal),
+                    Middle = Label(rect, "B", "", 16, FontStyle.Normal),
+                    Right = Label(rect, "C", "", 16, FontStyle.Normal),
+                };
+
+                row.Middle.alignment = TextAnchor.MiddleCenter;
+                _detailRows.Add(row);
+            }
+
+            return _detailRows[index];
         }
 
         private void RefreshTabs()
