@@ -433,6 +433,7 @@ differentiator, per the notes above.
 | R11 ingredient costs | ✅ recorded at pricing time, 5 tests |
 | R14 unnamed-mix value | ✅ priced at naming, and repaired on load |
 | R15 stale dedup keys | ✅ seeding now replaces rather than accumulates |
+| R16 renamed organisation | ✅ existing history adopted rather than orphaned |
 
 Everything that could be done without launching the game is done. **Every remaining item needs a
 running game**, which is the one thing this could not do.
@@ -799,3 +800,27 @@ written to prevent, and it was invisible: the log simply says `Production ignore
 which is what it says when the mechanism is working correctly.
 
 `Seed` now clears first, so the set cannot outlive the log it mirrors. 4 tests.
+
+---
+
+## R16 — A renamed organisation would orphan a character's entire history ✅
+
+Insurance, not a fix for an observed bug — but the exposure is total, so it is worth the code.
+
+`ProfileId` hashes four facts. Three are genuinely immutable: SteamID64, the save's creation date,
+and its world seed. The fourth, `OrganisationName`, is a plain mutable public field on the game's
+`GameManager`, and nothing in the shipped assemblies proves a player cannot change it.
+
+If it can be changed, the profile id changes with it, and every statistic, recipe and event for that
+character is orphaned in a folder nothing ever looks in again. The failure would be complete, silent,
+and indistinguishable from the mod simply forgetting everything.
+
+**Dropping the name from the hash was the wrong fix.** Changing the scheme re-keys every profile
+already on disk — causing the exact harm for certain, to avoid it happening maybe.
+
+Instead: when the computed id has no folder yet, look for one whose three immutable facts match and
+adopt it. A profile in use is never taken from the character using it, the common path costs one
+directory check, and an unreadable profile is skipped rather than aborting the search.
+
+7 tests, including that a different seed, a different creation date and a different account are all
+correctly refused — merging two playthroughs would be a worse bug than the one being prevented.

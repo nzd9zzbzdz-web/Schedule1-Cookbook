@@ -64,6 +64,8 @@ namespace RecipePlanner.Mod
             IsGameLoaded = true;
             _loadCompletedUtc = DateTime.UtcNow;
 
+            AdoptExistingProfile(context);
+
             _layout.EnsureProfileDir(context.ProfileId);
             new ProfileStore(_layout).Observe(context, DateTime.UtcNow);
 
@@ -131,6 +133,46 @@ namespace RecipePlanner.Mod
             // Mix maps are randomised per save, so a guide built for the previous character is
             // not merely stale — it is wrong.
             _mixGuide = null;
+        }
+
+        /// <summary>
+        /// Keeps a character's history if their profile id changes underneath them.
+        ///
+        /// The id hashes the organisation name along with three immutable facts, and that name is a
+        /// mutable field on the game's side. If it can be changed, the id changes with it and every
+        /// statistic, recipe and event for the character is orphaned in a folder nothing looks in
+        /// again — a total, silent loss.
+        ///
+        /// Only runs when the computed id has no folder yet, so an existing profile in use is never
+        /// taken from the character using it, and the common path costs one directory check.
+        /// </summary>
+        private void AdoptExistingProfile(PlayerContext context)
+        {
+            try
+            {
+                if (context?.Identity == null || string.IsNullOrEmpty(context.ProfileId)) return;
+                if (Directory.Exists(_layout.ProfileDir(context.ProfileId))) return;
+
+                var store = new ProfileStore(_layout);
+                var orphan = ProfileAdoption.FindOrphan(
+                    _layout.ListProfileIds(),
+                    id => store.Load(id)?.Identity,
+                    context.Identity);
+
+                if (orphan == null) return;
+
+                _log.Warn($"Profile id changed for this character — adopting the existing history " +
+                          $"under {orphan} rather than starting over. This happens if the " +
+                          "organisation name changed.");
+
+                context.ProfileId = orphan;
+            }
+            catch (Exception ex)
+            {
+                // Starting a fresh profile is a bad outcome but a survivable one; throwing here
+                // would stop the save loading at all.
+                _log.Warn("Could not check for an existing profile: " + ex.Message);
+            }
         }
 
         /// <summary>
