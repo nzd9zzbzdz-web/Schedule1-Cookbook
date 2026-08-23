@@ -146,8 +146,12 @@ namespace RecipePlanner.PhoneApp
             // design, and nothing else here was stopping it.
             go.AddComponent<RectMask2D>();
 
-            go.SetActive(false);
+            // Built while ACTIVE, then hidden. Unity does not run layout on an inactive object, so
+            // building first and activating later means every rect reads 0x0 during construction —
+            // which gives a viewport with no height, therefore no scrollable range, and geometry
+            // that anything measuring itself at build time gets wrong.
             _screen = CookbookScreen.CreateInto(rect);
+            go.SetActive(false);
             return go;
         }
 
@@ -210,6 +214,20 @@ namespace RecipePlanner.PhoneApp
             if (_button != null) _button.transform.SetAsLastSibling();
 
             if (!opening) return;
+
+            try
+            {
+                // The panel may have been built while the Products app itself was closed, in which
+                // case no layout pass has ever reached it and its rects are still zero. Forcing one
+                // before the screen re-measures is what makes the list scrollable on first open
+                // rather than only after some later, incidental rebuild.
+                var rect = _panel.GetComponent<RectTransform>();
+                if (rect != null) LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
+            }
+            catch (Exception ex)
+            {
+                RecipePlannerUI.Log?.Warn("Layout rebuild failed: " + ex.Message);
+            }
 
             try { _screen?.Refresh(); }
             catch (Exception ex)

@@ -233,6 +233,20 @@ namespace RecipePlanner.PhoneApp
             _scroll.horizontal = false;
             _scroll.movementType = ScrollRect.MovementType.Clamped;
 
+#if IL2CPP
+            // SmoothScroll cannot receive input on this branch — Il2CppInterop emits Unity's
+            // EventSystems handler interfaces as classes, so a MonoBehaviour cannot implement them
+            // — which leaves the ScrollRect as the only thing that can move the list.
+            //
+            // I previously claimed this degraded gracefully because "the ScrollRect handles the
+            // wheel itself". It does not when its sensitivity has been deliberately zeroed for
+            // SmoothScroll's benefit: with both switched off the list simply does not scroll, which
+            // is exactly what happened. Rows per notch rather than pixels, to match the Mono feel
+            // as closely as the built-in behaviour allows.
+            _scroll.scrollSensitivity = RowPitch;
+            _scroll.inertia = true;
+            _scroll.decelerationRate = 0.06f;
+#else
             // Zero, deliberately: SmoothScroll owns the wheel. Any value here reintroduces the
             // instant per-notch jump on top of the momentum, and the two fight each other.
             _scroll.scrollSensitivity = 0f;
@@ -241,6 +255,7 @@ namespace RecipePlanner.PhoneApp
             // deceleration would drift past it. Dragging still works — SmoothScroll stands aside
             // for the duration of a drag.
             _scroll.inertia = false;
+#endif
 
             _smooth = _viewport.gameObject.AddComponent<SmoothScroll>();
             _smooth.Target = _scroll;
