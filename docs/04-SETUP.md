@@ -28,12 +28,12 @@ The only thing left is the Phase 9 acceptance test: load a save and cook one bat
 | `RecipePlanner.UI` | netstandard2.0 | No — view model, data builder, UI seam |
 | `RecipePlanner.Mod` | netstandard2.0 | Only MelonLoader + Harmony |
 | `RecipePlanner.PhoneApp` | netstandard2.1 | **Yes — links Assembly-CSharp; Mono branch only** |
-| `RecipePlanner.Core.Tests` | net10.0 | No — 221 tests |
+| `RecipePlanner.Core.Tests` | net10.0 | No — 225 tests |
 | `tools/HookVerifier` | net10.0 | Reads game assemblies offline |
 
 ```bash
 dotnet build      # also stages the payload into dist\
-dotnet test       # 221 passing
+dotnet test       # 225 passing
 ```
 
 Core, Game and Mod reach the game only by reflection, and `SymbolGuard` resolves both

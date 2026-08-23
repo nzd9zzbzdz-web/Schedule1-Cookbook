@@ -128,7 +128,7 @@ The **static** half of the exit test passes:
 | `RecipePlanner.dll` references | `Core`, `Game`, `UI`, MelonLoader, 0Harmony — **no `PhoneApp`** |
 | `RecipePlanner.UI.dll` references | `netstandard` only — no Unity, no `ScheduleOne`, no `Assembly-CSharp` |
 | `RecipePlanner.PhoneApp.dll` | still carries every game reference, now quarantined behind the loader |
-| `dotnet test` | 221 passing (208 + 3 branch-detection + 10 report tests) |
+| `dotnet test` | 225 passing (208 + 3 branch-detection + 10 report tests) |
 | `dist/` payload | `RecipePlanner.dll`, `Core`, `Game`, **`UI`**, `PhoneApp` |
 
 Bonus: with the game references gone, `RecipePlanner.Mod` dropped from `netstandard2.1` back to
@@ -424,6 +424,7 @@ differentiator, per the notes above.
 | R7 packaging | 🟡 done; **needs the extract-and-launch check** |
 | R8 page copy | 🟡 written; **needs screenshots** |
 | R9 default-branch value | ✅ `cookbook.md` confirmed written live with real data |
+| R12 session lineage | ✅ new mixes no longer fall into "origin unknown" |
 | R10 unguarded reflection | ⬜ documented, not a blocker |
 | R11 ingredient costs | ⬜ documented, not a blocker |
 
@@ -575,3 +576,45 @@ Do not let these hold up the release — they are the next release, not this one
   through Il2CppInterop is the genuinely miserable part. R1 makes shipping without it acceptable.
 - **Roadmap phases 2, 3, 4, 6, 14, 15, 16, 17** — the planning and optimisation half.
 - **A `MelonPreferences` config.** Players will ask for toggles; that is a fine v1.1 response.
+
+---
+
+## R12 — A mix invented this session had no origin ✅
+
+Reported live, with screenshots: the game's own Products screen showed **Aspen Piss** with its
+recipe (`purpleexpress + gasoline → aspenpiss`), while the Cookbook filed it under
+**ORIGIN UNKNOWN**.
+
+**Cause.** `CookbookDataBuilder` built the lineage graph from `_catalog.Recipes` alone — the mix
+list read out of the **save file**. The game only writes a new mix into that file when it next
+saves, so a recipe invented this session is simply absent from it, and a product with no known
+parent falls into the unknown bucket.
+
+The information was never missing. The log shows it being captured 35 seconds before the screenshot:
+
+```
+09:38:32  New recipe discovered:  [purpleexpress>gasoline]
+09:39:07  Named mix 'Aspen Piss' (aspenpiss) — 1 earlier batch(es) updated.
+09:39:21  Catalog: 10 products, 2 recipes (save file), 8 discovered.
+```
+
+Two recipes from the save file, eight products discovered. The parent was recorded by production
+detection at the moment of the cook, and then not used.
+
+This is the worst possible recipe to lose lineage for: the one the player just invented and is
+opening the app to look at.
+
+**Fix.** The graph is now built from the save file **plus** the mod's own recipe repository. Each
+discovered recipe contributes one edge — `BaseProductId` is the immediate parent, the last step is
+the ingredient — deduplicated case-insensitively against the save file so nothing doubles once the
+game catches up, and skipping self-referential rows, which would loop the tree.
+
+Moved out of `EnsureCatalog` into `Build`, because the repository changes independently of the
+catalogue. The expensive part — the reflective catalogue read — stays cached; the graph fold is
+plain data over a few hundred rows.
+
+Four tests in `SessionLineageTests` pin it, including one that reproduces the original failure
+(save-file rows alone → incomplete lineage).
+
+**Still to verify live:** invent a mix and confirm it appears under its strain rather than
+ORIGIN UNKNOWN, without saving and reloading first.
