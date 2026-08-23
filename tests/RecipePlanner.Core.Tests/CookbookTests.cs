@@ -127,12 +127,16 @@ namespace RecipePlanner.Core.Tests
             recipe.SetHidden(true);
             repo.Upsert(recipe);
 
+            // Hidden entries stay in the list by default — greyed and sunk to the bottom — because
+            // a recipe that vanishes looks deleted even when nothing was deleted.
             var visible = Cookbook.Build(Entries(repo), Graph());
-            Assert.DoesNotContain(visible.SelectMany(s => s.Entries), e => e.ProductId == "thickmonkey");
+            Assert.Contains(visible.SelectMany(s => s.Entries), e => e.ProductId == "thickmonkey");
 
-            // Still there, and its statistics are untouched.
-            var all = Cookbook.Build(Entries(repo), Graph(), new CookbookQuery { ShowHidden = true });
-            var entry = all.SelectMany(s => s.Entries).Single(e => e.ProductId == "thickmonkey");
+            // Collapsed away only when the player asks. Still there, statistics untouched.
+            var collapsed = Cookbook.Build(Entries(repo), Graph(), new CookbookQuery { CollapseHidden = true });
+            Assert.DoesNotContain(collapsed.SelectMany(s => s.Entries), e => e.ProductId == "thickmonkey");
+
+            var entry = visible.SelectMany(s => s.Entries).Single(e => e.ProductId == "thickmonkey");
             Assert.True(entry.IsHidden);
             Assert.Equal(60, entry.UnitsProduced);
         }

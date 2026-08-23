@@ -69,7 +69,7 @@ Their words, and where each is handled:
 | Complaint | Where it is solved |
 |---|---|
 | Hundreds of recipes, impossible to navigate | Collapsible strain sections + 7 sort orders + filters (no search box — see Phase 13 above) |
-| Wants to hide recipes from the UI, not the game | `RecipeStatus.Hidden` — display only; history and stats untouched |
+| Wants to hide recipes from the UI, not the game | `RecipeStatus.Hidden` — greyed and sunk to the bottom, never deleted, one click to restore |
 | Recipes should connect as a production process | `RecipeGraph` lineage, verified on 81 real recipes |
 | Wants to see the progression | `RecipeGraph.BuildTree` per strain |
 | Sorting | 7 orders, favourites pinned above them |

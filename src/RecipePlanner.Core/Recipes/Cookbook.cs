@@ -68,7 +68,18 @@ namespace RecipePlanner.Core.Recipes
         public string Search { get; set; }
         public CookbookSort Sort { get; set; } = CookbookSort.Name;
         public bool Descending { get; set; }
-        public bool ShowHidden { get; set; }
+        /// <summary>
+        /// Removes hidden recipes from the list entirely.
+        ///
+        /// Off by default: hiding sinks a recipe to the bottom and greys it, which keeps the way
+        /// back visible. This is the escape hatch for a player who has hidden dozens and wants them
+        /// gone from view — the recipes are still there and still recorded either way.
+        ///
+        /// Replaces an earlier ShowHidden flag whose default did the opposite, removing hidden
+        /// recipes unless the player went looking for a toggle. That made hiding look like
+        /// deleting.
+        /// </summary>
+        public bool CollapseHidden { get; set; }
         public bool FavouritesOnly { get; set; }
         public bool ProducedOnly { get; set; }
         public string DrugType { get; set; }
@@ -154,7 +165,12 @@ namespace RecipePlanner.Core.Recipes
             foreach (var e in entries)
             {
                 if (e == null) continue;
-                if (e.IsHidden && !query.ShowHidden) continue;
+
+                // Hidden entries are kept unless the player explicitly collapses them away. They
+                // sink to the bottom of their section and render greyed instead of vanishing —
+                // hiding a recipe used to remove it from the list entirely, which looked exactly
+                // like deletion even though nothing was ever deleted, and left no obvious way back.
+                if (e.IsHidden && query.CollapseHidden) continue;
                 if (query.FavouritesOnly && !e.IsFavourite) continue;
                 if (query.ProducedOnly && e.TimesProduced == 0) continue;
 
@@ -195,7 +211,11 @@ namespace RecipePlanner.Core.Recipes
         /// </summary>
         public static IEnumerable<CookbookEntry> Sort(IEnumerable<CookbookEntry> entries, CookbookQuery query)
         {
-            var ordered = entries.OrderByDescending(e => e.IsFavourite);
+            // Hidden last, before anything else is considered — a hidden favourite still belongs at
+            // the bottom, because the player has said they are done with it.
+            var ordered = entries
+                .OrderBy(e => e.IsHidden)
+                .ThenByDescending(e => e.IsFavourite);
             var flip = query.Descending;
 
             switch (query.Sort)

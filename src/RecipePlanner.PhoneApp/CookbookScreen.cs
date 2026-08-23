@@ -1204,6 +1204,48 @@ namespace RecipePlanner.PhoneApp
             }
 
             /// <summary>
+            /// Fades everything on the row except the restore button.
+            ///
+            /// Colours are re-applied from the palette each time rather than multiplied, because
+            /// binding is repeated as rows recycle — scaling the current colour would darken a row
+            /// further every time it scrolled past.
+            /// </summary>
+            private void ApplyDimming(bool hidden)
+            {
+                var f = hidden ? DimFactor : 1f;
+
+                _name.color = Fade(_entry.IsFavourite ? Favourite : NameText, f);
+                _value.color = Fade(PriceText, f);
+                _stats.color = Fade(StatText, f);
+                _addiction.color = Fade(_addiction.color, hidden ? DimFactor : 1f);
+                _unknownOrigin.color = Fade(ChainText, f);
+                _overflow.color = Fade(ChainText, f);
+
+                _productIcon.color = Fade(Color.white, f);
+                _baseIcon.color = Fade(_baseIcon.color, 1f, hidden);
+
+                foreach (var slot in _additive)
+                    if (slot != null) slot.color = Fade(slot.color, 1f, hidden);
+
+                foreach (var plus in _plus)
+                    if (plus != null) plus.color = Fade(ChainText, f);
+
+                _barFillImage.color = Fade(_barFillImage.color, hidden ? DimFactor : 1f);
+                _barGlowImage.color = Fade(_barGlowImage.color, hidden ? 0.3f : 1f);
+            }
+
+            /// <summary>Keeps alpha, scales brightness.</summary>
+            private static Color Fade(Color colour, float factor) =>
+                new Color(colour.r * factor, colour.g * factor, colour.b * factor, colour.a);
+
+            /// <summary>
+            /// For sprites already carrying their own colour: drops alpha instead of brightness,
+            /// which is what reads as "set aside" on artwork rather than on text.
+            /// </summary>
+            private static Color Fade(Color colour, float factor, bool hidden) =>
+                new Color(colour.r, colour.g, colour.b, hidden ? IconDimAlpha : 1f);
+
+            /// <summary>
             /// Hides the entry from this list only. The recipe stays in the game and keeps its
             /// history and statistics — this exists purely so a cookbook of hundreds can be pruned
             /// to the ones the player actually cares about.
@@ -1259,7 +1301,16 @@ namespace RecipePlanner.PhoneApp
                 _stats.text = DescribeStats(entry);
 
                 _hideGlyph.text = entry.IsHidden ? "+" : "x";
-                _hideGlyph.color = entry.IsHidden ? StatText : ChainText;
+                _hideGlyph.color = entry.IsHidden ? Neon : ChainText;
+
+                // A hidden row stays in the list, dimmed. It is the only honest way to show that
+                // the recipe still exists: removing it outright looked like deletion, and left the
+                // player no visible way to undo something they had not meant to do.
+                //
+                // The whole row fades together — name, price, chain and meter — so it reads as one
+                // set-aside thing rather than a row with some parts missing. The restore button
+                // deliberately does NOT fade; it is the way back and has to stay findable.
+                ApplyDimming(entry.IsHidden);
 
                 var known = entry.OriginKnown;
                 _unknownOrigin.gameObject.SetActive(!known);
@@ -1403,7 +1454,7 @@ namespace RecipePlanner.PhoneApp
             var query = CurrentQuery();
             if (query == null) return;
 
-            query.ShowHidden = !query.ShowHidden;
+            query.CollapseHidden = !query.CollapseHidden;
             Refresh();
         }
 
@@ -1442,8 +1493,10 @@ namespace RecipePlanner.PhoneApp
 
             if (_hiddenLabel != null)
             {
-                _hiddenLabel.text = _query.ShowHidden ? "Hidden: on" : "Hidden: off";
-                StylePill(_hiddenLabel, _query.ShowHidden ? PillStyle.Solid : PillStyle.Quiet);
+                // "Hidden: shown" is the resting state now, so the label says what you are seeing
+                // rather than naming a setting.
+                _hiddenLabel.text = _query.CollapseHidden ? "Hidden: off" : "Hidden: shown";
+                StylePill(_hiddenLabel, _query.CollapseHidden ? PillStyle.Solid : PillStyle.Quiet);
             }
         }
 
@@ -2108,6 +2161,10 @@ namespace RecipePlanner.PhoneApp
         private static readonly Color BarTrack = new Color(1f, 1f, 1f, 0.05f);
         private static readonly Color RowStripe = new Color(1f, 1f, 1f, 0.02f);
         private static readonly Color Favourite = new Color(1f, 0.82f, 0.32f, 1f);
+
+        /// <summary>How far a hidden row is dimmed. Low enough to read as set aside, high enough to stay legible.</summary>
+        private const float DimFactor = 0.42f;
+        private const float IconDimAlpha = 0.35f;
 
         // Green, and much softer than the first attempt: the card sits over the list, so a strong
         // halo bleeds into the rows behind it and makes both harder to read.
