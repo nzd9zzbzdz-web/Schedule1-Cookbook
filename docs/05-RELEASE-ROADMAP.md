@@ -424,7 +424,7 @@ differentiator, per the notes above.
 | R7 packaging | 🟡 done; **needs the extract-and-launch check** |
 | R8 page copy | 🟡 written; **needs screenshots** |
 | R9 default-branch value | ✅ `cookbook.md` confirmed written live with real data |
-| R12 session lineage | ✅ new mixes no longer fall into "origin unknown" |
+| R12 session lineage | ✅ confirmed live — new mix placed under its strain, 4 levels deep, without saving |
 | R10 unguarded reflection | ⬜ documented, not a blocker |
 | R11 ingredient costs | ⬜ documented, not a blocker |
 
@@ -618,3 +618,32 @@ Four tests in `SessionLineageTests` pin it, including one that reproduces the or
 
 **Still to verify live:** invent a mix and confirm it appears under its strain rather than
 ORIGIN UNKNOWN, without saving and reloading first.
+
+### R12 — confirmed live, 2026-08-23
+
+The first fix was correct but insufficient, and the retest caught it. Recorded because the failure
+mode is instructive.
+
+`CookbookDataBuilder` was folding in our own recipes, but skipping any without an `OutputProductId`
+— and every recipe discovered from an unnamed mix had exactly that. A mix cooked before the player
+names it has no product yet, so the recipe was written blank, and `OnProduced`'s existing-recipe
+branch updated Name, Effects, Status and counts while never touching the one field that says what
+the recipe produces.
+
+The first retest *looked* like it passed only because the save file had caught up in the meantime.
+That is why the second test — a genuinely new mix, named, checked without saving — was the one
+worth running. **A fix verified against state that changed underneath it is not verified.**
+
+Final evidence:
+
+```
+10:00:39  Repaired 1 recipe(s) ... they can now be placed under their strain.
+10:00:44  Lineage: 3 recipe(s) from the save file plus 2 discovered this session
+10:02:15  New recipe discovered:  [aspenpiss>motoroil]
+10:02:18  Named mix 'Death Ghost' (deathghost) — 1 earlier batch(es) updated.
+10:02:24  Lineage: 3 recipe(s) from the save file plus 3 discovered this session
+```
+
+Death Ghost appeared under OG KUSH with its full four-level chain
+(`ogkush → thickmonkey → purpleexpress → aspenpiss → deathghost`), the ORIGIN UNKNOWN section was
+gone, and the save file still knew only 3 recipes throughout.
