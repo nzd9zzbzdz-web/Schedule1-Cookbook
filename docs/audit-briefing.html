@@ -1,0 +1,675 @@
+<title>Schedule I Production Hooks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@600;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --ground:#F1F3F2;
+  --surface:#FFFFFF;
+  --surface-2:#E7EBE9;
+  --line:#D2D9D6;
+  --line-strong:#B4BFBB;
+  --text:#131A18;
+  --text-2:#4C5754;
+  --text-3:#78837F;
+  --accent:#1F7A6E;
+  --accent-soft:#DCEBE7;
+  --verified:#1F7A6E;
+  --verified-soft:#DCEBE7;
+  --caution:#9A6516;
+  --caution-soft:#F5E9D5;
+  --risk:#A8412F;
+  --risk-soft:#F6E1DC;
+  --code-bg:#E7EBE9;
+
+  --f-display:"Chivo","Helvetica Neue",Arial,sans-serif;
+  --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0C1211;
+    --surface:#131B19;
+    --surface-2:#1A2422;
+    --line:#25322F;
+    --line-strong:#3A4A46;
+    --text:#E6ECEA;
+    --text-2:#A3B0AC;
+    --text-3:#77837F;
+    --accent:#4FBFAC;
+    --accent-soft:#122E2A;
+    --verified:#4FBFAC;
+    --verified-soft:#122E2A;
+    --caution:#D9A855;
+    --caution-soft:#2E2416;
+    --risk:#E0705B;
+    --risk-soft:#331A15;
+    --code-bg:#1A2422;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0C1211;
+  --surface:#131B19;
+  --surface-2:#1A2422;
+  --line:#25322F;
+  --line-strong:#3A4A46;
+  --text:#E6ECEA;
+  --text-2:#A3B0AC;
+  --text-3:#77837F;
+  --accent:#4FBFAC;
+  --accent-soft:#122E2A;
+  --verified:#4FBFAC;
+  --verified-soft:#122E2A;
+  --caution:#D9A855;
+  --caution-soft:#2E2416;
+  --risk:#E0705B;
+  --risk-soft:#331A15;
+  --code-bg:#1A2422;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--text);
+  font-family:var(--f-body);
+  font-size:16px;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1040px;margin:0 auto;padding:0 28px 96px}
+.col{max-width:68ch}
+
+/* ---------- masthead ---------- */
+header.top{
+  border-bottom:1px solid var(--line);
+  background:var(--surface);
+}
+.top-inner{
+  max-width:1040px;margin:0 auto;padding:44px 28px 34px;
+  display:flex;flex-direction:column;gap:18px;
+}
+.eyebrow{
+  font-family:var(--f-mono);font-size:11px;font-weight:500;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--accent);
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.eyebrow::before{
+  content:"";width:26px;height:1px;background:var(--accent);flex:none;
+}
+h1{
+  font-family:var(--f-display);font-weight:900;
+  font-size:clamp(32px,5.4vw,54px);line-height:1.02;
+  letter-spacing:-.025em;margin:0;text-wrap:balance;
+}
+.deck{
+  font-size:clamp(16px,2vw,19px);color:var(--text-2);
+  max-width:60ch;margin:0;line-height:1.55;
+}
+.deck b{color:var(--text);font-weight:600}
+
+/* ---------- stat strip ---------- */
+.strip{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  border-top:1px solid var(--line);border-left:1px solid var(--line);
+  margin-top:8px;
+}
+.strip div{
+  border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:14px 16px;background:var(--surface);
+}
+.strip dt{
+  font-family:var(--f-mono);font-size:10.5px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--text-3);margin:0 0 4px;
+}
+.strip dd{
+  margin:0;font-family:var(--f-mono);font-size:19px;font-weight:600;
+  color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-.01em;
+}
+.strip dd small{font-size:12px;font-weight:400;color:var(--text-2)}
+
+/* ---------- sections ---------- */
+section{margin-top:64px}
+h2{
+  font-family:var(--f-display);font-weight:800;
+  font-size:clamp(23px,3vw,30px);line-height:1.14;letter-spacing:-.02em;
+  margin:0 0 6px;text-wrap:balance;
+}
+h3{
+  font-family:var(--f-display);font-weight:700;font-size:17px;
+  letter-spacing:-.008em;margin:34px 0 8px;
+}
+.sec-label{
+  font-family:var(--f-mono);font-size:10.5px;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--text-3);
+  padding-bottom:8px;margin-bottom:16px;border-bottom:1px solid var(--line);
+  display:block;
+}
+p{margin:0 0 14px}
+p:last-child{margin-bottom:0}
+
+code{
+  font-family:var(--f-mono);font-size:.855em;
+  background:var(--code-bg);color:var(--text);
+  padding:.12em .38em;border-radius:3px;
+  border:1px solid var(--line);
+  word-break:break-word;
+}
+a{color:var(--accent);text-underline-offset:3px}
+a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+
+/* ---------- badges ---------- */
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--f-mono);font-size:10px;font-weight:600;
+  letter-spacing:.12em;text-transform:uppercase;
+  padding:3px 8px;border-radius:2px;white-space:nowrap;
+  border:1px solid currentColor;
+}
+.b-ok{color:var(--verified);background:var(--verified-soft)}
+.b-vf{color:var(--caution);background:var(--caution-soft)}
+.b-rk{color:var(--risk);background:var(--risk-soft)}
+
+/* ---------- the call flow trace ---------- */
+.trace{
+  background:var(--surface);border:1px solid var(--line);
+  padding:26px 24px;margin:22px 0 0;overflow-x:auto;
+}
+.trace-head{
+  display:flex;justify-content:space-between;align-items:baseline;
+  gap:14px;flex-wrap:wrap;margin-bottom:20px;
+}
+.trace-head h3{margin:0;font-size:15px}
+.trace ol{list-style:none;margin:0;padding:0;min-width:440px}
+.trace li{
+  display:grid;grid-template-columns:88px 18px 1fr;
+  align-items:start;gap:0 14px;position:relative;
+}
+.trace li .who{
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text-3);
+  text-align:right;padding-top:9px;
+}
+.trace li .rail{
+  position:relative;display:flex;justify-content:center;padding-top:14px;
+}
+.trace li .rail::before{
+  content:"";width:9px;height:9px;border-radius:50%;
+  background:var(--ground);border:1.5px solid var(--line-strong);flex:none;z-index:1;
+}
+.trace li:not(:last-child) .rail::after{
+  content:"";position:absolute;top:22px;bottom:-6px;
+  width:1.5px;background:var(--line);
+}
+.trace li .step{padding:7px 0 14px}
+.trace li .sig{
+  font-family:var(--f-mono);font-size:13px;font-weight:500;
+  color:var(--text);display:block;line-height:1.45;
+}
+.trace li .note{
+  font-size:12.5px;color:var(--text-2);display:block;margin-top:3px;line-height:1.5;
+}
+.trace li.hit .rail::before{
+  background:var(--accent);border-color:var(--accent);
+  width:13px;height:13px;box-shadow:0 0 0 4px var(--accent-soft);
+}
+.trace li.hit .step{
+  background:var(--accent-soft);margin:2px -12px 8px;padding:10px 12px;
+  border-left:2px solid var(--accent);
+}
+.trace li.hit .sig{font-weight:600}
+.trace li.hit .note{color:var(--text)}
+.hit-tag{
+  font-family:var(--f-mono);font-size:9.5px;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--accent);display:block;margin-bottom:3px;
+}
+.rpc{
+  font-family:var(--f-mono);font-size:9.5px;letter-spacing:.08em;
+  color:var(--text-3);border:1px solid var(--line);
+  padding:1px 5px;border-radius:2px;margin-left:7px;white-space:nowrap;
+  vertical-align:1px;
+}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:18px 0 0;border:1px solid var(--line);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:14px}
+th,td{text-align:left;padding:11px 15px;border-bottom:1px solid var(--line);vertical-align:top}
+th{
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--text-3);font-weight:500;
+  background:var(--surface-2);white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td code{background:transparent;border:0;padding:0;font-size:12.6px;color:var(--text)}
+td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- callout ---------- */
+.callout{
+  border:1px solid var(--line);border-left:3px solid var(--caution);
+  background:var(--surface);padding:18px 20px;margin:22px 0 0;
+}
+.callout.risk{border-left-color:var(--risk)}
+.callout.ok{border-left-color:var(--accent)}
+.callout h3{margin:10px 0 8px;font-size:16px}
+.callout p{font-size:14.5px;color:var(--text-2)}
+.callout p b{color:var(--text)}
+
+/* ---------- findings grid ---------- */
+.finds{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));
+  gap:1px;background:var(--line);border:1px solid var(--line);margin-top:22px;
+}
+.find{background:var(--surface);padding:18px 18px 20px}
+.find .k{
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:9px;
+}
+.find .v{
+  font-family:var(--f-display);font-weight:700;font-size:16px;
+  line-height:1.28;letter-spacing:-.01em;margin:0 0 7px;
+}
+.find p{font-size:13.5px;color:var(--text-2);line-height:1.5;margin:0}
+
+/* ---------- decision ---------- */
+.decision{
+  border:1px solid var(--line-strong);background:var(--surface);
+  padding:26px 26px 28px;margin-top:22px;
+}
+.decision .badge{margin-bottom:12px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-top:20px}
+.opt{background:var(--surface-2);padding:16px 17px}
+.opt.pick{background:var(--accent-soft)}
+.opt h4{
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  margin:0 0 8px;color:var(--text-3);font-weight:600;
+}
+.opt.pick h4{color:var(--accent)}
+.opt p{font-size:13.5px;color:var(--text-2);margin:0}
+.opt.pick p{color:var(--text)}
+
+footer{
+  margin-top:72px;padding-top:22px;border-top:1px solid var(--line);
+  font-family:var(--f-mono);font-size:11.5px;color:var(--text-3);
+  display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+}
+ul.tight{margin:10px 0 0;padding-left:19px}
+ul.tight li{margin-bottom:7px;font-size:14.5px;color:var(--text-2)}
+ul.tight li b{color:var(--text);font-weight:600}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:560px){
+  .trace li{grid-template-columns:16px 1fr}
+  .trace li .who{display:none}
+}
+</style>
+
+<header class="top">
+  <div class="top-inner">
+    <span class="eyebrow">Technical Audit · Complete · Core built &amp; tested</span>
+    <h1>Schedule I Production Hooks</h1>
+    <p class="deck">
+      Every class, method and event needed to detect a completed cook — read straight out of the
+      shipped game binary and real save files. <b>Nothing here is inferred from a wiki.</b>
+    </p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <dl class="strip">
+    <div><dt>Game build</dt><dd>0.4.5f2</dd></div>
+    <div><dt>Engine</dt><dd>2022.3 <small>Unity</small></dd></div>
+    <div><dt>Backend</dt><dd>IL2CPP <small>v31</small></dd></div>
+    <div><dt>Types dumped</dt><dd>18,963</dd></div>
+    <div><dt>Methods</dt><dd>147,513</dd></div>
+    <div><dt>Tests passing</dt><dd>72 <small>/ 72</small></dd></div>
+  </dl>
+
+  <!-- ================= THE ANSWER ================= -->
+  <section>
+    <span class="sec-label">The critical research question</span>
+    <div class="col">
+      <h2>How do we know the player just cooked something?</h2>
+      <p>
+        Four separate production pipelines exist, each with its own completion path. The main recipe
+        system — the mixing station — resolves to a single reliable hook.
+      </p>
+    </div>
+
+    <div class="trace">
+      <div class="trace-head">
+        <h3><code>ScheduleOne.ObjectScripts.MixingStation</code></h3>
+        <span class="badge b-ok">Verified in metadata</span>
+      </div>
+      <ol>
+        <li>
+          <span class="who">Player</span><span class="rail"></span>
+          <span class="step">
+            <span class="sig">StartButtonClicked() → CanStartMix()</span>
+            <span class="note">Gate: slots filled, output has space.</span>
+          </span>
+        </li>
+        <li>
+          <span class="who">Client → Host</span><span class="rail"></span>
+          <span class="step">
+            <span class="sig">SendMixingOperation()<span class="rpc">ServerRpc</span></span>
+            <span class="note">Only the host executes this body.</span>
+          </span>
+        </li>
+        <li>
+          <span class="who">Host → All</span><span class="rail"></span>
+          <span class="step">
+            <span class="sig">SetMixOperation()<span class="rpc">Observers + Target</span></span>
+            <span class="note">Populates <code>CurrentMixOperation</code> everywhere.</span>
+          </span>
+        </li>
+        <li>
+          <span class="who">All clients</span><span class="rail"></span>
+          <span class="step">
+            <span class="sig">MixingStart() → fires onMixStart</span>
+            <span class="note">Machine animates; the clock starts.</span>
+          </span>
+        </li>
+        <li>
+          <span class="who">Tick</span><span class="rail"></span>
+          <span class="step">
+            <span class="sig">OnMinPass() / OnTimePass()</span>
+            <span class="note">Decrements <code>CurrentMixTime</code> until
+            <code>IsCurrentMixingOperationComplete()</code>.</span>
+          </span>
+        </li>
+        <li class="hit">
+          <span class="who">Host → All</span><span class="rail"></span>
+          <span class="step">
+            <span class="hit-tag">◆ Hook here</span>
+            <span class="sig">MixingDone_Networked()<span class="rpc">ObserversRpc</span> → MixingDone()</span>
+            <span class="note">
+              Reached on <b>every</b> client, <b>after</b> completion is confirmed, while
+              <code>CurrentMixOperation</code> is <b>still populated</b>. Cancelled and partial
+              operations never arrive here.
+            </span>
+          </span>
+        </li>
+        <li>
+          <span class="who">Host only</span><span class="rail"></span>
+          <span class="step">
+            <span class="sig">TryCreateOutputItems()<span class="rpc">ServerRpc</span></span>
+            <span class="note">Items appear on clients via slot replication, not locally —
+            never depend on this firing client-side.</span>
+          </span>
+        </li>
+        <li>
+          <span class="who">All clients</span><span class="rail"></span>
+          <span class="step">
+            <span class="sig">OutputChanged() → fires onOutputCollected</span>
+            <span class="note">Optional confirmation that units actually landed.</span>
+          </span>
+        </li>
+      </ol>
+    </div>
+
+    <h3>What one hook yields</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Wanted</th><th>Read from</th></tr></thead>
+        <tbody>
+          <tr><td>Base product</td><td><code>CurrentMixOperation.ProductID</code></td></tr>
+          <tr><td>Ingredient</td><td><code>CurrentMixOperation.IngredientID</code></td></tr>
+          <tr><td>Units produced</td><td><code>CurrentMixOperation.Quantity</code></td></tr>
+          <tr><td>Quality</td><td><code>CurrentMixOperation.ProductQuality</code> <code>(EQuality)</code></td></tr>
+          <tr><td>Resulting product</td><td><code>MixOperation.GetOutput()</code></td></tr>
+          <tr><td>Is it a new discovery</td><td><code>MixOperation.IsOutputKnown()</code></td></tr>
+          <tr><td>Who produced it</td><td><code>PlayerUserObject</code> / <code>NPCUserObject</code></td></tr>
+          <tr><td>Station identity</td><td><code>GridItem.GUID</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout risk">
+      <span class="badge b-rk">Would silently break Phase 9</span>
+      <h3>The Mk2 trap</h3>
+      <p>
+        <code>MixingStationMk2</code> is a subclass that <b>overrides</b> <code>MixingDone()</code>.
+        A Harmony patch targets one method body, so patching only the base class misses every Mk2
+        station — and the audited save's own station is <code>mixingstationmk2</code>.
+        <b>Patch both.</b> If the override also calls <code>base.MixingDone()</code>, one batch fires
+        twice, which the idempotency key already absorbs.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= IDENTITY ================= -->
+  <section>
+    <span class="sec-label">Player, save &amp; character identity</span>
+    <div class="col">
+      <h2>Statistics can't leak between characters</h2>
+      <p>
+        The game already keys saves by Steam ID on disk, and exposes the same value at runtime —
+        so identity needs no guesswork.
+      </p>
+    </div>
+
+    <div class="finds">
+      <div class="find">
+        <span class="k">On disk</span>
+        <p class="v">Saves\&lt;SteamID64&gt;\SaveGame_N</p>
+        <p>The save folder is literally named after the owning Steam account.</p>
+      </div>
+      <div class="find">
+        <span class="k">Per player</span>
+        <p class="v">Player.json → PlayerCode</p>
+        <p>The SteamID64 — recorded even for <code>Player_0</code>, the host.</p>
+      </div>
+      <div class="find">
+        <span class="k">Character name</span>
+        <p class="v">Game.json → OrganisationName</p>
+        <p>Chosen at creation. The closest thing to a character identity.</p>
+      </div>
+      <div class="find">
+        <span class="k">At runtime</span>
+        <p class="v">LoadManager.ActiveSaveInfo</p>
+        <p>Carries <code>SavePath</code>, <code>SaveSlotNumber</code>, <code>DateCreated</code>, <code>Networth</code>.</p>
+      </div>
+    </div>
+
+    <div class="callout ok">
+      <h3>The profile key</h3>
+      <p>
+        <code>SHA256( SteamID64 | OrganisationName | CreationDate | Seed )</code>
+      </p>
+      <p>
+        <b>Never key on the save slot.</b> Slots get deleted and reused —
+        <code>SaveGame_2</code> today is not <code>SaveGame_2</code> next week.
+        <code>CreationDate</code> and <code>Seed</code> are immutable for the life of a save, so the
+        key survives slot churn and cannot collide between two characters.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= DISCOVERY ================= -->
+  <section>
+    <span class="sec-label">Automatic recipe discovery</span>
+    <div class="col">
+      <h2>The cookbook can build itself</h2>
+      <p>
+        Discovery isn't something we have to infer — the game already raises first-class events for
+        it. All of these live on <code>ScheduleOne.Product.ProductManager</code>.
+      </p>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Signal</th><th>Hook</th></tr></thead>
+        <tbody>
+          <tr><td>New single-step recipe learned</td><td><code>onMixRecipeAdded</code> / <code>CreateMixRecipe()</code></td></tr>
+          <tr><td>Brand-new product exists</td><td><code>onNewProductCreated</code></td></tr>
+          <tr><td>Product became discovered</td><td><code>onProductDiscovered</code>, <code>DiscoverProduct()</code></td></tr>
+          <tr><td>Player is naming a new mix</td><td><code>FinishAndNameMix()</code>, <code>NewMixScreen.onMixNamed</code></td></tr>
+          <tr><td>Unknown mix detected in UI</td><td><code>MixingStationInterface.CheckForUnknownMix()</code></td></tr>
+          <tr><td>Mix finished (manager level)</td><td><code>onMixCompleted</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <span class="badge b-vf">Verify before building the resolver</span>
+      <h3>The field names are reversed from the intuitive reading</h3>
+      <p>
+        In <code>Products.json</code>, the field named <code>Product</code> holds the <b>additive</b>:
+        <code>{Product: "cuke", Mixer: "ogkush", Output: "thickmonkey"}</code> — Cuke is the additive,
+        OG Kush the base strain. Confirm the semantics before building the recipe chain resolver.
+        Getting this backwards would invert every recipe in the cookbook.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= ACCURACY ================= -->
+  <section>
+    <span class="sec-label">Preventing incorrect statistics</span>
+    <div class="col">
+      <h2>Accuracy over counting inventory</h2>
+      <p>
+        Inventory deltas cannot distinguish produced from bought, transferred, or spawned. Every
+        count comes from a completion event instead.
+      </p>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>Counting a batch twice</td><td>Idempotency key: <code>stationGUID + operationSignature + completionGameTime</code></td></tr>
+          <tr><td>Duplicate events</td><td>Hook the transition, never poll state — <code>IsMixingDone</code> would re-fire every frame</td></tr>
+          <tr><td>Cancelled production</td><td>Naturally excluded — never reaches <code>MixingDone</code></td></tr>
+          <tr><td>Reload recounting</td><td>Suppress until <code>onLoadComplete</code> plus a settle window; stations resume mid-operation</td></tr>
+          <tr><td>Inventory transfers</td><td>Never count inventory. Completion events only</td></tr>
+          <tr><td>Debug spawns</td><td>Stamp <code>Settings.ConsoleEnabled</code> on every event; annotate, don't silently trust</td></tr>
+          <tr><td>Drying / bricking / packaging</td><td>Transforms of existing units — separate event kinds, excluded from totals</td></tr>
+          <tr><td>Another player's batch</td><td>Attribution via <code>PlayerUserObject == Player.Local</code></td></tr>
+          <tr><td>Mod crash mid-cook</td><td>Append-only event log; all aggregates are derived and rebuildable</td></tr>
+          <tr><td>Game update breaks a hook</td><td>Startup symbol verification — disable the tracker rather than record garbage</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= RANDOMIZED ================= -->
+  <section>
+    <span class="sec-label">Finding that reshapes the plan</span>
+    <div class="col">
+      <h2>A static recipe table would be wrong</h2>
+      <p>
+        <code>Game.json</code> exposes <code>Settings.UseRandomizedMixMaps</code> — <b>per save</b>.
+        When a player enables it, that save's mixing map is randomized, and any recipe table copied
+        from a wiki is simply incorrect for them.
+      </p>
+      <p>
+        The planner must read <code>WeedMixMap</code>, <code>MethMixMap</code>,
+        <code>CokeMixMap</code> and <code>ShroomMixMap</code> from the live
+        <code>ProductManager</code> for the currently loaded save, and cache recipe data keyed by
+        profile. This is the strongest argument for building the Game Data Reader properly.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= DECISION ================= -->
+  <section>
+    <span class="sec-label">Branch decision · resolved</span>
+    <div class="col">
+      <h2>Build against the Mono branch</h2>
+      <p>
+        Read straight out of Steam's own app metadata for app <code>3164500</code> — the
+        <code>alternate</code> branch description:
+      </p>
+      <p style="font-family:var(--f-mono);font-size:14px;border-left:2px solid var(--accent);padding-left:14px;color:var(--text)">
+        “Uses Mono instead of IL2CPP as the scripting backend. Less performant than the default
+        version, but less prone to crashes.”
+      </p>
+      <p>
+        Every class and event in this audit is identical on both branches — only the plumbing
+        changes — so the audit holds either way.
+      </p>
+    </div>
+    <div class="decision">
+      <div class="opts">
+        <div class="opt pick">
+          <h4>◆ Chosen — alternate (Mono)</h4>
+          <p>
+            <code>Assembly-CSharp.dll</code> is directly patchable, events subscribe with a plain
+            <code>+=</code>, and Harmony behaves normally. Materially less work.
+          </p>
+        </div>
+        <div class="opt">
+          <h4>Deferred — default (IL2CPP)</h4>
+          <p>
+            MelonLoader plus Il2CppInterop, generated proxy assemblies, interop delegate wrapping
+            for every event, and marshalling costs that rule out per-frame work. Add once the
+            tracker logic is proven.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="callout ok">
+      <h3>Bonus confirmation from the same metadata</h3>
+      <p>
+        Schedule I's Steam Cloud mapping is declared as
+        <code>WinAppDataLocalLow → TVGS/Schedule I/Saves/{64BitSteamID} → *.json</code>. The save
+        tree really is cloud-synced, so keeping our data in
+        <code>%APPDATA%\Schedule1RecipePlanner\</code> is <b>confirmed</b> rather than assumed.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= BUILT ================= -->
+  <section>
+    <span class="sec-label">Built &amp; verified</span>
+    <div class="col">
+      <h2>The tracking core is done and tested</h2>
+      <p>
+        Everything provable without launching the game has been built and proven —
+        <b>72 tests passing</b>. The only work still gated on a game launch is the thin binding layer.
+      </p>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Capability</th><th>Proven by</th><th class="num">Tests</th></tr></thead>
+        <tbody>
+          <tr><td>Profile identity can't collide or leak between characters</td><td>Slot reuse, deleted-and-recreated saves, component boundaries</td><td class="num">9</td></tr>
+          <tr><td>Production detection rejects everything it should</td><td>Cancel, reload, transfer, transform, employee, remote, duplicate</td><td class="num">17</td></tr>
+          <tr><td>Statistics fold correctly</td><td>Exclusions, breakdowns, records, determinism</td><td class="num">9</td></tr>
+          <tr><td>History survives crashes and restarts</td><td>Torn final line, replay equivalence, stats rebuild</td><td class="num">8</td></tr>
+          <tr><td>Cookbook builds itself</td><td>Ingredient order, re-cooks, planned-then-produced</td><td class="num">8</td></tr>
+          <tr><td>Update protection fails closed</td><td>Renamed method, missing type, optional degradation</td><td class="num">7</td></tr>
+          <tr><td>Live station → candidate → event</td><td>Reflection reader against fakes mirroring the real shape</td><td class="num">5</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= NEXT ================= -->
+  <section>
+    <span class="sec-label">Next</span>
+    <div class="col">
+      <h2>Phase 9 is where this becomes trustworthy</h2>
+      <p>
+        Cook one batch and get exactly one <code>Production Detected</code> line. Then run the
+        negative tests — each must produce <b>nothing</b>:
+      </p>
+      <ul class="tight">
+        <li>Start a mix and <b>cancel</b> it</li>
+        <li><b>Reload</b> a save with a mix already in progress</li>
+        <li>Let an <b>employee</b> finish a batch — logs as <code>employee</code>, not <code>local</code></li>
+        <li><b>Move</b> product between storage containers</li>
+        <li><b>Dry, brick or package</b> existing product</li>
+        <li><b>Spawn</b> product via the debug console</li>
+      </ul>
+      <p style="margin-top:16px">
+        Identity (Phase 8) lands strictly before detection (Phase 9) — detection without identity
+        writes statistics into the wrong character.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <span>Phase 0 · audited against build 24705572</span>
+    <span>Reproduce: <code>node tools/il2cpp-dump/dump.js</code></span>
+  </footer>
+</div>

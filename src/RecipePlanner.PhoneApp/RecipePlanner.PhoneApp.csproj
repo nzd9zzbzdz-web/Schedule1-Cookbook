@@ -1,0 +1,83 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>RecipePlanner.PhoneApp</AssemblyName>
+    <RootNamespace>RecipePlanner.PhoneApp</RootNamespace>
+    <!-- Game assemblies target a different profile; we only consume their metadata. -->
+    <NoWarn>$(NoWarn);CS1701;CS1702;MSB3277;CS0436</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    THE ONLY project that references the game directly, and therefore the only Mono-only piece.
+
+    RecipePlanner.Core and RecipePlanner.Game stay reflection-based and branch-agnostic on purpose:
+    if IL2CPP support is ever wanted again, only this project has to be reworked. Building UI
+    through reflection is possible but miserable — subclassing the generic App<T> base is exactly
+    the case Il2CppInterop handles worst — so here we trade portability for sanity.
+  -->
+  <PropertyGroup>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Schedule I</GameDir>
+    <ManagedDir>$(GameDir)\Schedule I_Data\Managed</ManagedDir>
+    <HasManaged Condition="Exists('$(ManagedDir)\Assembly-CSharp.dll')">true</HasManaged>
+    <MelonDir Condition="Exists('$(GameDir)\MelonLoader\net472\MelonLoader.dll')">$(GameDir)\MelonLoader\net472</MelonDir>
+    <MelonDir Condition="'$(MelonDir)' == '' And Exists('$(GameDir)\MelonLoader\net35\MelonLoader.dll')">$(GameDir)\MelonLoader\net35</MelonDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RecipePlanner.Core\RecipePlanner.Core.csproj" />
+    <ProjectReference Include="..\RecipePlanner.Game\RecipePlanner.Game.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(HasManaged)' == 'true'">
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- BaseItemDefinition (and its Icon sprite) lives here, not in Assembly-CSharp. -->
+    <Reference Include="ScheduleOne.Core">
+      <HintPath>$(ManagedDir)\ScheduleOne.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(ManagedDir)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(ManagedDir)\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(ManagedDir)\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(ManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(ManagedDir)\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="MelonLoader" Condition="'$(MelonDir)' != ''">
+      <HintPath>$(MelonDir)\MelonLoader.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Without the Mono branch installed this compiles to an empty assembly rather than failing. -->
+  <ItemGroup Condition="'$(HasManaged)' != 'true'">
+    <Compile Remove="**\*.cs" />
+  </ItemGroup>
+
+  <Target Name="ReportNoManaged" BeforeTargets="Build" Condition="'$(HasManaged)' != 'true'">
+    <Warning Text="Assembly-CSharp.dll not found under '$(ManagedDir)'. The phone app requires the Mono ('alternate') Steam branch; built as an empty stub. See docs/04-SETUP.md." />
+  </Target>
+
+</Project>

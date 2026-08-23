@@ -1,0 +1,89 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      netstandard2.1 to match the game: Assembly-CSharp targets 2.1 and loads on this runtime, and
+      .NET 6 implements 2.1 as well. Raised from 2.0 when the phone app arrived, since referencing
+      the game assemblies forces 2.1.
+    -->
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>RecipePlanner</AssemblyName>
+    <RootNamespace>RecipePlanner.Mod</RootNamespace>
+    <!-- MelonLoader.dll targets a newer framework; we only read its metadata at compile time. -->
+    <NoWarn>$(NoWarn);CS1701;CS1702;MSB3277</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    This project references only MelonLoader and Harmony; the game itself is reached by reflection
+    (see RecipePlanner.Game/Binding). RecipePlanner.PhoneApp is the one piece that links
+    Assembly-CSharp directly, and therefore the one Mono-only piece.
+
+    Override GameDir if Steam installed elsewhere:
+        dotnet build -p:GameDir="D:\Steam\steamapps\common\Schedule I"
+  -->
+  <PropertyGroup>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Schedule I</GameDir>
+
+    <!--
+      netstandard2.1 matches the game: Assembly-CSharp itself targets 2.1 and loads fine on this
+      runtime, and .NET 6 implements 2.1 too, so the IL2CPP host would also accept it.
+
+      MelonLoader ships a build per host runtime and the game decides which one runs:
+      the Mono branch hosts mods on .NET Framework, the IL2CPP branch on .NET 6. Referencing the
+      wrong one still compiles (the API surface we touch is identical) but pins us to metadata the
+      game will never load, so detect the branch and match it.
+    -->
+    <IsMonoBranch Condition="Exists('$(GameDir)\Schedule I_Data\Managed\Assembly-CSharp.dll')">true</IsMonoBranch>
+
+    <ResolvedMelonDir Condition="'$(IsMonoBranch)' == 'true' And Exists('$(GameDir)\MelonLoader\net35\MelonLoader.dll')">$(GameDir)\MelonLoader\net35</ResolvedMelonDir>
+    <ResolvedMelonDir Condition="'$(IsMonoBranch)' == 'true' And Exists('$(GameDir)\MelonLoader\net472\MelonLoader.dll')">$(GameDir)\MelonLoader\net472</ResolvedMelonDir>
+    <ResolvedMelonDir Condition="'$(ResolvedMelonDir)' == '' And Exists('$(GameDir)\MelonLoader\net6\MelonLoader.dll')">$(GameDir)\MelonLoader\net6</ResolvedMelonDir>
+    <ResolvedMelonDir Condition="'$(ResolvedMelonDir)' == '' And Exists('$(GameDir)\MelonLoader\net472\MelonLoader.dll')">$(GameDir)\MelonLoader\net472</ResolvedMelonDir>
+    <HasMelonLoader Condition="'$(ResolvedMelonDir)' != ''">true</HasMelonLoader>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RecipePlanner.Core\RecipePlanner.Core.csproj" />
+    <ProjectReference Include="..\RecipePlanner.Game\RecipePlanner.Game.csproj" />
+    <ProjectReference Include="..\RecipePlanner.PhoneApp\RecipePlanner.PhoneApp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(HasMelonLoader)' == 'true'">
+    <Reference Include="MelonLoader">
+      <HintPath>$(ResolvedMelonDir)\MelonLoader.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(ResolvedMelonDir)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(HasMelonLoader)' != 'true'">
+    <Compile Remove="**\*.cs" />
+  </ItemGroup>
+
+  <Target Name="ReportMelonLoaderMissing" BeforeTargets="Build" Condition="'$(HasMelonLoader)' != 'true'">
+    <Warning Text="MelonLoader not found under '$(GameDir)\MelonLoader'. RecipePlanner.Mod built as an empty stub; Core and Game are unaffected. See docs/04-SETUP.md." />
+  </Target>
+
+  <Target Name="ReportMelonLoaderFound" BeforeTargets="Build" Condition="'$(HasMelonLoader)' == 'true'">
+    <Message Importance="high" Text="MelonLoader: $(ResolvedMelonDir)" />
+  </Target>
+
+  <!-- Gather everything that has to be copied into Schedule I\Mods\ in one place. -->
+  <Target Name="StageMod" AfterTargets="Build" Condition="'$(HasMelonLoader)' == 'true'">
+    <ItemGroup>
+      <ModPayload Include="$(TargetDir)RecipePlanner.dll" />
+      <ModPayload Include="$(TargetDir)RecipePlanner.Core.dll" />
+      <ModPayload Include="$(TargetDir)RecipePlanner.Game.dll" />
+      <ModPayload Include="$(TargetDir)RecipePlanner.PhoneApp.dll" Condition="Exists('$(TargetDir)RecipePlanner.PhoneApp.dll')" />
+      <ModPayload Include="$(TargetDir)Newtonsoft.Json.dll" Condition="Exists('$(TargetDir)Newtonsoft.Json.dll')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ModPayload)" DestinationFolder="$(MSBuildProjectDirectory)\..\..\dist" />
+    <Message Importance="high" Text="Staged mod payload to dist\ — copy its contents into '$(GameDir)\Mods\'" />
+  </Target>
+
+</Project>

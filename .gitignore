@@ -1,0 +1,7 @@
+bin/
+obj/
+*.user
+.vs/
+
+# Built payload: attached to releases instead of tracked (see docs/05-RELEASE-ROADMAP.md R0)
+dist/

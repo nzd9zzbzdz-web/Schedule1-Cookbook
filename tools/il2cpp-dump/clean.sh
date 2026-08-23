@@ -1,0 +1,2 @@
+#!/bin/sh
+sed -E 's/(Rpc(Writer|Logic|Reader)___[A-Za-z0-9_.|<>]*\/[0-9]+, ?)//g; s/(sync___[A-Za-z0-9_<>]*\/[0-9]+, ?)//g; s/(NetworkInitialize[A-Za-z0-9_.|<>-]*\/[0-9]+, ?)//g; s/(ReadSyncVar___[A-Za-z0-9_.]*\/[0-9]+, ?)//g; s/(<[A-Za-z0-9_]+>k__BackingField, ?)//g; s/(syncVar___[A-Za-z0-9_<>]*, ?)//g; s/(NetworkInitialize[A-Za-z0-9_.-]*Excuted, ?)//g; s/(get_[A-Za-z0-9_<>]*\/0, ?)//g; s/(set_[A-Za-z0-9_<>]*\/1, ?)//g'

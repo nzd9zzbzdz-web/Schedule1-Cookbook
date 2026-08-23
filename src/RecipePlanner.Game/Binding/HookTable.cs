@@ -1,0 +1,176 @@
+using System.Collections.Generic;
+
+namespace RecipePlanner.Game.Binding
+{
+    /// <summary>
+    /// One game type we depend on, plus the exact members we touch.
+    ///
+    /// Every entry was confirmed to exist in Schedule I 0.4.5f2 by dumping global-metadata.dat —
+    /// see docs/00-PHASE-0-AUDIT.md. This table is the machine-readable form of that audit, and
+    /// SymbolGuard checks it against the running game before a single patch is applied.
+    /// </summary>
+    public sealed class HookDefinition
+    {
+        public string TypeName { get; set; }
+        public string Purpose { get; set; }
+        public string[] Methods { get; set; } = new string[0];
+        public string[] Members { get; set; } = new string[0];
+
+        /// <summary>
+        /// Optional entries do not fail verification when absent — used for types that may not
+        /// exist on every branch or version (station MkN variants, future drug types).
+        /// </summary>
+        public bool Optional { get; set; }
+
+        public override string ToString() => TypeName;
+    }
+
+    public static class HookTable
+    {
+        public const string VerifiedAgainstGameVersion = "0.4.5f2";
+
+        // ---- namespaces ----
+        public const string NsObjects = "ScheduleOne.ObjectScripts.";
+        public const string NsProduct = "ScheduleOne.Product.";
+        public const string NsPlayer = "ScheduleOne.PlayerScripts.";
+        public const string NsPersist = "ScheduleOne.Persistence.";
+        public const string NsNet = "ScheduleOne.Networking.";
+
+        // ---- the primary production hook ----
+        public const string MixingStation = NsObjects + "MixingStation";
+        public const string MixingStationMk2 = NsObjects + "MixingStationMk2";
+        public const string MixOperation = NsObjects + "MixOperation";
+        public const string MixingDone = "MixingDone";
+
+        public static IReadOnlyList<HookDefinition> All => Definitions;
+
+        private static readonly HookDefinition[] Definitions =
+        {
+            // ================= identity =================
+            new HookDefinition
+            {
+                TypeName = NsPlayer + "Player",
+                Purpose = "Local player identity and attribution (audit §1.2)",
+                Members = new[] { "Local", "PlayerList", "PlayerCode", "IsLocalPlayer" }
+            },
+            new HookDefinition
+            {
+                TypeName = NsPersist + "LoadManager",
+                Purpose = "Save load lifecycle; gates the whole tracker (audit §1.2)",
+                Members = new[] { "ActiveSaveInfo", "LoadedGameFolderPath", "IsGameLoaded" }
+            },
+            new HookDefinition
+            {
+                TypeName = NsPersist + "SaveInfo",
+                Purpose = "Profile key components (audit §1.3)",
+                Members = new[] { "SavePath", "SaveSlotNumber", "OrganisationName", "DateCreated" }
+            },
+            new HookDefinition
+            {
+                TypeName = NsNet + "Lobby",
+                Purpose = "Host detection; ServerRpc bodies only run on the host (audit §4)",
+                Members = new[] { "IsHost" },
+                Optional = true
+            },
+
+            // ================= production: mixing =================
+            new HookDefinition
+            {
+                TypeName = MixingStation,
+                Purpose = "PRIMARY production hook (audit §2.1)",
+                Methods = new[] { MixingDone, "GetMixQuantity", "GetProduct", "GetMixer" },
+                Members = new[] { "CurrentMixOperation", "PlayerUserObject", "NPCUserObject" }
+            },
+            new HookDefinition
+            {
+                TypeName = MixingStationMk2,
+                Purpose = "Overrides MixingDone — must be patched separately (audit §2.1 caveat 2)",
+                Methods = new[] { MixingDone },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = MixOperation,
+                Purpose = "The batch itself (audit §2.1)",
+                Members = new[] { "ProductID", "ProductQuality", "IngredientID", "Quantity" }
+            },
+
+            // ================= production: cooking =================
+            // The oven has NO single completion method. Both the player path
+            // (SmashLabOvenTask.Shatter) and the employee path (FinishLabOvenBehaviour) add the
+            // product to OutputSlot themselves and then call SendCookOperation(null) to clear the
+            // operation. Those are the only two sites in the assembly that pass null, and neither
+            // cancel nor start does — which makes it the completion signal. CurrentOperation must
+            // be read in a PREFIX, because the call is what clears it.
+            //
+            // Earlier revisions of this table claimed CreateStationItems was the production hook.
+            // It is not: it instantiates the cosmetic tray/liquid props and creates no inventory.
+            new HookDefinition
+            {
+                TypeName = NsObjects + "LabOven",
+                Purpose = "Meth cook completion — SendCookOperation(null) (audit §2.2)",
+                Methods = new[] { "SendCookOperation", "IsReadyForHarvest" },
+                Members = new[] { "CurrentOperation", "OutputSlot", "PlayerUserObject", "NPCUserObject" },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = NsObjects + "OvenCookOperation",
+                Purpose = "Oven batch; units = Cookable.ProductQuantity * IngredientQuantity (audit §2.2)",
+                Members = new[] { "IngredientID", "IngredientQuality", "IngredientQuantity", "ProductID", "Cookable" },
+                Optional = true
+            },
+            // FinalizeOperation is the Observers RPC *writer*; the item is created in the generated
+            // RpcLogic___ body, which runs exactly once per machine per completion. Patching the
+            // writer would miss clients entirely and the logic nulls CurrentCookOperation, so the
+            // operation has to be read before it runs.
+            new HookDefinition
+            {
+                TypeName = NsObjects + "ChemistryStation",
+                Purpose = "Chemistry completion — RpcLogic___FinalizeOperation (audit §2.3)",
+                Methods = new[] { "FinalizeOperation", "RpcLogic___FinalizeOperation_2166136261" },
+                Members = new[] { "CurrentCookOperation", "OutputSlot" },
+                Optional = true
+            },
+            // Same shape as chemistry. Output is fixed: CocaineBaseDefinition x10 at InputQuality.
+            new HookDefinition
+            {
+                TypeName = NsObjects + "Cauldron",
+                Purpose = "Cocaine base completion — RpcLogic___FinishCookOperation (audit §2.4)",
+                Methods = new[] { "FinishCookOperation", "RpcLogic___FinishCookOperation_2166136261" },
+                Members = new[] { "InputQuality", "OutputSlot" },
+                Optional = true
+            },
+
+            // ================= product data & discovery =================
+            new HookDefinition
+            {
+                TypeName = NsProduct + "ProductManager",
+                Purpose = "Discovery events, mix maps, valuation (audit §2.6/§2.7)",
+                Methods = new[] { "GetMixerMap", "CalculateProductValue", "DiscoverProduct" },
+                Members = new[]
+                {
+                    "onMixRecipeAdded", "onNewProductCreated", "onProductDiscovered",
+                    "DiscoveredProducts", "WeedMixMap", "MethMixMap", "CokeMixMap", "ShroomMixMap"
+                }
+            },
+            new HookDefinition
+            {
+                TypeName = NsProduct + "ProductDefinition",
+                Purpose = "Pricing inputs (audit §2.9)",
+                Members = new[] { "BasePrice", "MarketValue", "DrugType" },
+                Optional = true
+            }
+        };
+
+        /// <summary>Definitions whose absence must disable the tracker outright.</summary>
+        public static IEnumerable<HookDefinition> Required
+        {
+            get
+            {
+                foreach (var d in Definitions)
+                    if (!d.Optional) yield return d;
+            }
+        }
+    }
+}

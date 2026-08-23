@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RecipePlanner.Core/RecipePlanner.Core.csproj" />
+    <Project Path="src/RecipePlanner.Game/RecipePlanner.Game.csproj" />
+    <Project Path="src/RecipePlanner.Mod/RecipePlanner.Mod.csproj" />
+    <Project Path="src/RecipePlanner.PhoneApp/RecipePlanner.PhoneApp.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RecipePlanner.Core.Tests/RecipePlanner.Core.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/HookVerifier/HookVerifier.csproj" />
+  </Folder>
+</Solution>

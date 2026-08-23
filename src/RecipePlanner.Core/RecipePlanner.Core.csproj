@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- netstandard2.0 loads on BOTH MelonLoader hosts: .NET Framework (Mono branch) and .NET 6 (IL2CPP). -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <!-- The domain is mutable DTOs hydrated from JSON; nullable annotations add noise, not safety. -->
+    <Nullable>disable</Nullable>
+    <AssemblyName>RecipePlanner.Core</AssemblyName>
+    <RootNamespace>RecipePlanner.Core</RootNamespace>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+</Project>
