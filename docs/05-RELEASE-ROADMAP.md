@@ -428,6 +428,7 @@ differentiator, per the notes above.
 | R8 page copy | 🟡 written; **needs screenshots** |
 | R9 default-branch value | ✅ `cookbook.md` confirmed written live with real data |
 | R12 session lineage | ✅ confirmed live — new mix placed under its strain, 4 levels deep, without saving |
+| R13 mixing guide | ✅ built and hook-verified; needs a live look |
 | R10 unguarded reflection | ⬜ documented, not a blocker |
 | R11 ingredient costs | ⬜ documented, not a blocker |
 
@@ -685,3 +686,56 @@ verified.
 Nothing needs undoing. `RecipePlanner.Mod`, `.Core`, `.Game` and `.UI` are already branch-agnostic
 and carry no game references; only `RecipePlanner.PhoneApp` is Mono-bound, and it is loaded by name
 rather than linked. The work is porting the UI, not unpicking the architecture.
+
+---
+
+## R13 — The mixing guide ✅ built, needs a live look
+
+Requested after the UI pass: a button in the empty space beside the strain strip that opens a chart
+of what mixing gives what.
+
+### What the game actually exposes
+
+The mixing model is **spatial**, not a lookup table, which is why no simple ingredient→effect table
+was ever going to be right:
+
+| Type | What it carries |
+|---|---|
+| `ScheduleOne.Effects.Effect` | `MixDirection` (Vector2), `MixMagnitude`, `Tier`, `Addictiveness`, `ValueChange`, `ValueMultiplier`, and `LabelColor` |
+| `ScheduleOne.Effects.MixMaps.MixerMap` | `MapRadius`, a list of effect regions, and `GetEffectAtPoint(Vector2)` |
+| `MixerMapEffect` | one effect's `Position`, `Radius` and `Property` |
+| `ScheduleOne.Product.PropertyItemDefinition` | `Properties` — how products *and* mixers carry effects |
+
+Adding an ingredient shifts each existing effect's point by the ingredient's own direction and
+distance; whatever region it lands in is what that effect becomes.
+
+### How it is built
+
+- [`MixGuideReader`](../src/RecipePlanner.Game/Binding/MixGuideReader.cs) reads it live, per save.
+  `UseRandomizedMixMaps` means a chart shipped as a constant is confidently wrong for some players.
+- Transformations are resolved by calling the game's **own** `GetEffectAtPoint` through
+  [`MapPointResolver`](../src/RecipePlanner.Game/Binding/MapPointResolver.cs), which recovers
+  `Vector2` from the method's parameter list — this assembly still has no UnityEngine reference.
+- [`MixMapSolver`](../src/RecipePlanner.Core/Mixing/MixMapSolver.cs) is the fallback, and when it is
+  used the guide is flagged approximate and the UI says so. A derived answer and an authoritative
+  one must not look identical.
+- Every member read is in the hook table. **22/22 verified** against the shipped assemblies — the
+  pricing hole taught that reflection the symbol check cannot see fails silently.
+
+### The screen
+
+Two columns: browse on the left, answer on the right, both visible at once. Two tabs —
+*By ingredient* ("I am holding Banana, what happens?") and *By effect* ("I want Zombifying, how do I
+get there?"). Effects are drawn in the game's own `LabelColor`, which the cookbook's effects card
+now uses too, replacing the colours it was inventing from a name hash.
+
+**Exit test:** open the guide on a live save; the ingredient list is populated, selecting one shows
+what it adds and what it rewrites, and the *By effect* tab lists real routes. The log line reports
+non-zero counts and does **not** say "derived locally":
+
+```
+Mix guide: N ingredients, M effects, K transformation(s).
+```
+
+If it does say "derived locally", `GetEffectAtPoint` could not be reached and the numbers are our
+reading of the geometry rather than the game's — worth knowing before trusting the chart.

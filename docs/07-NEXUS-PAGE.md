@@ -142,6 +142,9 @@ employees cook while you are somewhere else.
 - **Employee cooks are tracked but kept separate**, so your personal totals stay yours.
 - **A readable cookbook outside the game.** Your recipes, chains and totals are also written to a
   `cookbook.md` file you can open in any editor, keep, or share.
+- **A mixing guide, read out of YOUR save.** What each ingredient adds, what it turns existing
+  effects into, and every route to a given effect. Schedule I can randomise its mix maps per save,
+  so a chart copied off a wiki is wrong for some players — this one is read from your own game.
 
 ### It will not touch your save
 
@@ -157,7 +160,7 @@ trustworthy.
 Schedule I updates often, and mods that read the game's internals break when it does. Most break
 silently, and quietly record nonsense.
 
-This one checks all 16 of the game symbols it depends on **before** it patches anything. If even
+This one checks all 22 of the game symbols it depends on **before** it patches anything. If even
 one has moved, it disables tracking, says so in the log, and records nothing. Wrong statistics are
 worse than no statistics.
 
@@ -198,8 +201,8 @@ Full guide, including uninstall and troubleshooting: [06-INSTALL.md](06-INSTALL.
 
 Being straight about scope, because the name used to promise more:
 
-- **No recipe planning or prediction.** It records what you *have* made; it does not tell you what
-  to make next, or predict a mix's effects before you cook it.
+- **No prediction.** The mixing guide tells you what each ingredient does, but the mod will not
+  predict a whole mix's final effects before you cook it, or tell you what to make next.
 - **No recipe optimisation or comparison.**
 - **No search box** in the cookbook. A text field inside the running game fights your movement keys
   for keyboard focus. Sorting and filters cover the same ground; search comes back when it can be
@@ -239,4 +242,4 @@ First public release.
 - Cookbook phone app with strain grouping, ingredient chains, 7 sort orders, filters, favourites
   and hiding (`alternate` branch)
 - Lifetime statistics
-- 16/16 hook verification that fails closed on a game update
+- 22/22 hook verification that fails closed on a game update

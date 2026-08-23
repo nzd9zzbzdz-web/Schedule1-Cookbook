@@ -1,4 +1,5 @@
 using System;
+using RecipePlanner.Core.Mixing;
 using RecipePlanner.Game.Binding;
 
 namespace RecipePlanner.UI
@@ -19,6 +20,16 @@ namespace RecipePlanner.UI
 
         /// <summary>Supplies what the screen renders. Set by the mod at startup.</summary>
         public static Func<CookbookViewModel> DataSource { get; set; }
+
+        /// <summary>
+        /// Supplies the mixing guide — what each ingredient does, and how to reach each effect.
+        ///
+        /// Separate from <see cref="DataSource"/> because it is built once per save from the game's
+        /// mix maps rather than recomputed whenever the cookbook is opened, and because the screen
+        /// must still work when it returns nothing: the guide is a reference, and losing it should
+        /// cost a button rather than the app.
+        /// </summary>
+        public static Func<MixGuide> MixGuideSource { get; set; }
 
         /// <summary>
         /// Hides or restores a recipe in the cookbook view. Display only — the recipe stays in the

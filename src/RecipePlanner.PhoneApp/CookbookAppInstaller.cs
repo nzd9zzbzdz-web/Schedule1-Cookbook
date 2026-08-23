@@ -45,6 +45,10 @@ namespace RecipePlanner.PhoneApp
             // rebuilt each time. See UiSkin.
             UiSkin.Clear();
 
+            // Effect colours are cached from the mix guide, which is rebuilt per save. Mix maps are
+            // randomised per save, so a colour cached for the previous character could be wrong.
+            CookbookScreen.ForgetEffectColours();
+
             try
             {
                 var source = FindTemplateApp();

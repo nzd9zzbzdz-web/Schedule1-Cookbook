@@ -95,7 +95,7 @@ Launch the game and watch the MelonLoader console, or open
 
 ```
 [Schedule_I_Cookbook] Schedule I Cookbook starting — verifying game symbols before patching.
-[Schedule_I_Cookbook] Symbol check PASSED (16/16 hooks resolved)
+[Schedule_I_Cookbook] Symbol check PASSED (22/22 hooks resolved)
 [Schedule_I_Cookbook] Production tracking ENABLED — waiting for a save to load.
 ```
 

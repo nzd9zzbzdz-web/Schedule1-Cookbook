@@ -192,6 +192,62 @@ namespace RecipePlanner.Game.Binding
                 Purpose = "Per-ingredient shop price (audit §2.9)",
                 Members = new[] { "BasePurchasePrice" },
                 Optional = true
+            },
+
+            // ================= mixing guide =================
+            // Everything the "what does this ingredient do?" chart reads. Optional throughout: the
+            // guide is a reference screen, and losing it should cost the player a screen rather
+            // than their production tracking.
+            //
+            // Listed here rather than reached quietly, which is the lesson from the pricing hole —
+            // reflection the symbol check cannot see fails silently, and a mixing chart that has
+            // gone silently wrong is worse than one that is missing.
+            new HookDefinition
+            {
+                TypeName = NsProduct + "ProductManager",
+                Purpose = "Mixable ingredient list for the mixing guide",
+                Members = new[] { "ValidMixIngredients" },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = "ScheduleOne.Registry",
+                Purpose = "Ingredient lookup by id for the mixing guide",
+                Methods = new[] { "GetItem" },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = "ScheduleOne.Product.PropertyItemDefinition",
+                Purpose = "The effects an item carries — both products and mixers (audit §2.7)",
+                Members = new[] { "Properties" },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = "ScheduleOne.Effects.Effect",
+                Purpose = "Effect identity, value, colour, and how it shifts the mix map",
+                Members = new[]
+                {
+                    "ID", "Name", "Tier", "Addictiveness", "LabelColor",
+                    "ValueChange", "ValueMultiplier", "MixDirection", "MixMagnitude"
+                },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = "ScheduleOne.Effects.MixMaps.MixerMap",
+                Purpose = "The per-drug-type effect map the guide is derived from",
+                Methods = new[] { "GetEffectAtPoint" },
+                Members = new[] { "MapRadius", "Effects" },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = "ScheduleOne.Effects.MixMaps.MixerMapEffect",
+                Purpose = "One effect's region on the map",
+                Members = new[] { "Position", "Radius", "Property" },
+                Optional = true
             }
         };
 

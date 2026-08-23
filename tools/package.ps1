@@ -108,7 +108,7 @@ INSTALL
 
 CHECK IT WORKED
   Look in  Schedule I\MelonLoader\Latest.log  for:
-      [Schedule_I_Cookbook] Symbol check PASSED (16/16 hooks resolved)
+      [Schedule_I_Cookbook] Symbol check PASSED (22/22 hooks resolved)
       [Schedule_I_Cookbook] Production tracking ENABLED
 
 BRANCHES

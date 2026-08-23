@@ -85,6 +85,7 @@ namespace RecipePlanner.Mod
                 // Prices come from the game itself; reimplementing its maths would drift.
                 var prices = new GamePriceSource(gameAssemblies, log);
                 _host.AttachPricing(prices);
+                _host.AttachMixGuide(new MixGuideReader(gameAssemblies, log));
                 _host.AttachCookbook(new CookbookDataBuilder(new ProductCatalogReader(gameAssemblies, log), log), log);
 
                 _harmony = new HarmonyLib.Harmony("com.schedule1.recipeplanner");

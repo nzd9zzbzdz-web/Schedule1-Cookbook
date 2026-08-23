@@ -9,9 +9,9 @@ Legend: ✅ done and tested · 🟡 logic complete and tested, needs the live ga
 |---|---|---|---|
 | **0** | **Schedule I Technical Audit** | Hook table confirmed against the shipped binary | ✅ [audit](00-PHASE-0-AUDIT.md) |
 | **1** | **Basic Mod Skeleton** | Mod loads, verifies symbols, survives a save load/unload cycle | ✅ verified live |
-| 2 | Game Data Reader | Dump the live mix map, product definitions and prices for the loaded save | 🟡 `GameFacts` reads products; mix-map walk outstanding |
-| 3 | Ingredient & Effect Database | Every ingredient and all 34 effects resolved from game data, not hard-coded | ⬜ |
-| 4 | Recipe Calculation Engine | Predicted effects match the game's actual output for 20 known mixes | ⬜ |
+| 2 | Game Data Reader | Dump the live mix map, product definitions and prices for the loaded save | ✅ the mix-map walk is what the mixing guide is built on |
+| 3 | Ingredient & Effect Database | Every ingredient and all 34 effects resolved from game data, not hard-coded | ✅ `MixGuideReader` — read live, per save |
+| 4 | Recipe Calculation Engine | Predicted effects match the game's actual output for 20 known mixes | 🟡 the map is read and transformations derived; PREDICTING a whole mix is still outstanding |
 | 5 | Pricing Engine | Predicted value matches `CalculateProductValue` within rounding for 20 products | 🟡 engine, tests and `GamePriceSource` all written; needs live confirmation (release roadmap R5) |
 | 6 | Basic Recipe Planner UI | Plan a recipe and see cost / value / effects | ⬜ |
 | 7 | Recipe Saving / Cookbook | Recipes persist across a game restart | ✅ `FileRecipeRepository`, round-trip tested |
@@ -44,6 +44,23 @@ The two feature items still worth noting:
 - **Phase 13** — the app has sort, filter, hide and favourites. There is deliberately **no search
   box**: a uGUI `InputField` inside the running game steals keyboard focus from the player. Sort and
   filter cover the same need without that risk.
+- **Phases 2 and 3 closed by the mixing guide.** `MixGuideReader` walks the live mix maps and reads
+  every effect and mixable ingredient out of the running game. Phase 4 is partly there with it: the
+  transformation table is derived, but predicting a whole mix end to end is not built.
+
+### The mixing guide
+
+Reading the maps turned out to be the easy part once the shapes were found:
+
+- `Effect` carries `MixDirection`, `MixMagnitude`, `Tier`, `Addictiveness`, `ValueChange` and the
+  game's own `LabelColor` — which the cookbook now uses instead of colours of our own invention.
+- `MixerMap` holds an effect circle per region plus `GetEffectAtPoint`, so mixing resolves
+  spatially rather than through a lookup table.
+- `PropertyItemDefinition.Properties` is how both products and mixers carry their effects.
+
+The guide calls the game's own `GetEffectAtPoint` wherever it can, and only falls back to
+`MixMapSolver` — our reading of the same geometry — when it cannot, flagging itself as derived so
+the UI can say so.
 
 ### What the player asked the Cookbook to fix
 

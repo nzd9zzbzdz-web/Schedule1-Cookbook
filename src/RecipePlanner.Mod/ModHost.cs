@@ -6,6 +6,7 @@ using System.Reflection;
 using System.IO;
 using System.Text;
 using RecipePlanner.Core.Identity;
+using RecipePlanner.Core.Mixing;
 using RecipePlanner.Core.Production;
 using RecipePlanner.Core.Pricing;
 using RecipePlanner.Core.Recipes;
@@ -33,6 +34,8 @@ namespace RecipePlanner.Mod
         private RecipeDiscoveryService _discovery;
         private CookbookDataBuilder _cookbookData;
         private GamePriceSource _prices;
+        private MixGuideReader _mixGuideReader;
+        private MixGuide _mixGuide;
 
         public PlayerContext Context { get; private set; }
 
@@ -113,6 +116,10 @@ namespace RecipePlanner.Mod
             if (_cookbookData != null) _cookbookData.SaveFolderPath = context.SavePath;
             _cookbookData?.Invalidate();
             _prices?.Invalidate();
+
+            // Mix maps are randomised per save, so a guide built for the previous character is
+            // not merely stale — it is wrong.
+            _mixGuide = null;
         }
 
         /// <summary>
@@ -208,6 +215,36 @@ namespace RecipePlanner.Mod
             RecipePlannerUI.Log = log;
             RecipePlannerUI.DataSource = BuildCookbookView;
             RecipePlannerUI.SetRecipeHidden = SetRecipeHidden;
+            RecipePlannerUI.MixGuideSource = BuildMixGuide;
+        }
+
+        /// <summary>Hands the mix guide its reader. Called once, at startup.</summary>
+        public void AttachMixGuide(MixGuideReader reader)
+        {
+            _mixGuideReader = reader;
+        }
+
+        /// <summary>
+        /// Built once per save and then cached.
+        ///
+        /// The maps are fixed for a given save — <c>UseRandomizedMixMaps</c> randomises them when
+        /// the save is created, not while it is played — so the several thousand point lookups
+        /// behind the chart are worth doing once rather than every time the screen opens. The cache
+        /// is dropped on save load along with everything else keyed to a character.
+        /// </summary>
+        private MixGuide BuildMixGuide()
+        {
+            if (_mixGuide != null) return _mixGuide;
+            if (_mixGuideReader == null) return new MixGuide();
+
+            try { _mixGuide = _mixGuideReader.Read(); }
+            catch (Exception ex)
+            {
+                _log.Warn("Mix guide could not be built: " + ex.Message);
+                _mixGuide = new MixGuide();
+            }
+
+            return _mixGuide;
         }
 
         /// <summary>

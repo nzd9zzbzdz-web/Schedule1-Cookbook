@@ -2,26 +2,28 @@
 
 An automatic cookbook and production record for Schedule I's mixing system.
 
-It answers two questions:
+It answers three questions:
 
 - **How do I make it?** — every recipe you have discovered, grouped by strain, with the full
   ingredient chain that leads to it
 - **What have I made?** — production history and lifetime statistics, recorded automatically
+- **What does this ingredient do?** — a mixing guide read out of your own save: what each mixer
+  adds, what it turns existing effects into, and every route to a given effect
 
 Production is tracked **automatically**. You never tell the mod you cooked something — it hooks the
 game's own completion events. It never writes to your save.
 
-> **Not a planner yet.** Recipe *planning*, prediction and optimisation are on the roadmap but are
-> not built. What works today is the cookbook and the production record. See
-> [02-ROADMAP.md](docs/02-ROADMAP.md).
+> **Not a planner yet.** The mixing guide tells you what each ingredient does, but the mod still
+> does not *predict* a mix or optimise one for you — you look things up and decide. Prediction and
+> optimisation remain on the roadmap. See [02-ROADMAP.md](docs/02-ROADMAP.md).
 
 ## Status
 
 **Working in-game**, pre-release. Automatic production tracking is confirmed end-to-end on a live
 session.
 
-- `dotnet test` → **225 passing**
-- Hook table verified **16/16** against both the shipped binary and the live IL2CPP proxies
+- `dotnet test` → **244 passing**
+- Hook table verified **22/22** against both the shipped binary and the live IL2CPP proxies
 - Roadmap phases 0, 1, 7, 8, 9, 10, 11, 12, 18 confirmed live
 
 Real output from a running game:
@@ -51,7 +53,7 @@ Release readiness is tracked in [05-RELEASE-ROADMAP.md](docs/05-RELEASE-ROADMAP.
 that has actually been tested. IL2CPP support is a 1.1 question, once there are real users to say
 whether it is wanted.
 
-Confirmed on a live save (2026-08-23, Mono): 16/16 symbol check, patching, branch detection, the
+Confirmed on a live save (2026-08-23, Mono): symbol check, patching, branch detection, the
 Cookbook app across two consecutive saves, production tracking, recipe discovery,
 `Prices loaded: 18 products, 198 ingredients`, `cookbook.md` written with real data, and three
 consecutive new mixes placed under their strain without saving.
@@ -87,7 +89,7 @@ See **[06-INSTALL.md](docs/06-INSTALL.md)**.
 
 | Project | Target | Needs the game? |
 |---|---|---|
-| `RecipePlanner.Core` | netstandard2.0 | No — identity, tracker, statistics, storage, recipes |
+| `RecipePlanner.Core` | netstandard2.0 | No — identity, tracker, statistics, storage, recipes, mixing guide |
 | `RecipePlanner.Game` | netstandard2.0 | No — reflection bindings + `SymbolGuard` |
 | `RecipePlanner.UI` | netstandard2.0 | No — view model, data builder, the UI seam |
 | `RecipePlanner.Mod` | netstandard2.0 | Only MelonLoader + Harmony |
@@ -99,7 +101,7 @@ runtime, which is what keeps the mod alive on the IL2CPP branch.
 
 ```bash
 dotnet build -c Release   # also stages the payload into dist\
-dotnet test               # 225 passing
+dotnet test               # 244 passing
 ```
 
 `Newtonsoft.Json` is **not** shipped — MelonLoader provides 13.0.4 on every host.

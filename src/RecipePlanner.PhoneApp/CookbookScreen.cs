@@ -172,9 +172,14 @@ namespace RecipePlanner.PhoneApp
 
             BuildToolbar(font);
 
+            // The strip stops short of the right edge to leave room for the guide button. Strain
+            // tiles are laid out left to right and rarely fill the row, so this reclaims space that
+            // was empty anyway rather than taking any from them.
             _strip = CreateChild(_root, "StrainStrip");
             Anchor(_strip, new Vector2(0f, 1f), new Vector2(1f, 1f),
-                   new Vector2(8f, StripBottom), new Vector2(-8f, StripTop));
+                   new Vector2(8f, StripBottom), new Vector2(-GuideButtonWidth - 16f, StripTop));
+
+            BuildGuideButton(font);
 
             _caption = CreateText(_root, "Caption", "", font, CaptionFontSize, FontStyle.Bold);
             _caption.color = HeaderText;
@@ -1318,6 +1323,54 @@ namespace RecipePlanner.PhoneApp
                 _hiddenLabel.text = _query.ShowHidden ? "Hidden: on" : "Hidden: off";
         }
 
+        // ---------- mix guide ----------
+
+        private const float GuideButtonWidth = 108f;
+
+        private MixGuideScreen _mixGuide;
+
+        /// <summary>
+        /// Opens the mixing reference. Built lazily on first use rather than alongside the cookbook:
+        /// it constructs a few hundred objects, and a player who never opens it should not pay for
+        /// them every time a save loads.
+        /// </summary>
+        private void BuildGuideButton(Font font)
+        {
+            var button = CreateChild(_root, "GuideButton");
+            button.anchorMin = new Vector2(1f, 1f);
+            button.anchorMax = new Vector2(1f, 1f);
+            button.pivot = new Vector2(1f, 1f);
+            button.offsetMin = new Vector2(-GuideButtonWidth - 8f, StripBottom);
+            button.offsetMax = new Vector2(-8f, StripTop);
+
+            var image = button.gameObject.AddComponent<Image>();
+            StyleRoundedButton(button, image);
+
+            var label = CreateText(button, "Label", "MIX\nGUIDE", font, ToolFontSize, FontStyle.Bold);
+            label.alignment = TextAnchor.MiddleCenter;
+            label.color = HeaderText;
+            Anchor(label.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            var clickable = button.gameObject.AddComponent<Button>();
+            clickable.targetGraphic = image;
+            clickable.colors = ButtonColours;
+            clickable.onClick.AddListener(() =>
+            {
+                try
+                {
+                    HideEffects();
+                    _pinnedProductId = null;
+
+                    if (_mixGuide == null) _mixGuide = MixGuideScreen.CreateInto(_root, ResolveFont(_root));
+                    _mixGuide.Open();
+                }
+                catch (Exception ex)
+                {
+                    RecipePlannerUI.Log?.Error("Mix guide failed to open: " + ex);
+                }
+            });
+        }
+
         // ---------- effects card ----------
 
         private RectTransform _effectsCard;
@@ -1491,12 +1544,58 @@ namespace RecipePlanner.PhoneApp
         {
             if (string.IsNullOrEmpty(effect)) return NameText;
 
+            // The game's own LabelColor where we have it, so the card matches what the Products
+            // screen shows for the same effect. Reading it costs nothing — the mix guide already
+            // has every effect loaded — and a colour that disagrees with the game's is worse than
+            // no colour at all, because the player learns the wrong association.
+            var real = RealEffectColour(effect);
+            if (real.HasValue) return real.Value;
+
+            // Nothing loaded yet, or an effect the guide has never seen. A hue derived from the
+            // name at least stays stable between openings.
             unchecked
             {
                 var hash = 17;
                 foreach (var c in effect) hash = hash * 31 + char.ToLowerInvariant(c);
                 var hue = Mathf.Abs(hash % 360) / 360f;
                 return Color.HSVToRGB(hue, 0.52f, 1f);
+            }
+        }
+
+        /// <summary>
+        /// Effects are keyed by id in the guide but the cookbook carries display names, so both are
+        /// checked. Cached because this runs once per chip on every hover.
+        /// </summary>
+        private static Dictionary<string, Color> _effectColours;
+
+        /// <summary>Dropped when the app is rebuilt; the guide behind these is per save.</summary>
+        internal static void ForgetEffectColours() => _effectColours = null;
+
+        private static Color? RealEffectColour(string effect)
+        {
+            try
+            {
+                if (_effectColours == null)
+                {
+                    var guide = RecipePlannerUI.MixGuideSource?.Invoke();
+                    if (guide == null || guide.Effects.Count == 0) return null;
+
+                    _effectColours = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var known in guide.Effects)
+                    {
+                        if (known == null) continue;
+                        var colour = new Color(known.ColourR, known.ColourG, known.ColourB, 1f);
+                        if (!string.IsNullOrEmpty(known.Id)) _effectColours[known.Id] = colour;
+                        if (!string.IsNullOrEmpty(known.Name)) _effectColours[known.Name] = colour;
+                    }
+                }
+
+                Color found;
+                return _effectColours.TryGetValue(effect, out found) ? found : (Color?)null;
+            }
+            catch
+            {
+                return null;
             }
         }
 
