@@ -362,7 +362,7 @@ with no extra steps.
   Every Nexus permission field must be set to **No** to match — a page that contradicts its own
   licence is what gets argued about later.
   *(MIT was in place for commits `8b4b61c` through `e0c703b`. See the note under R0.)*
-- **Version** — `0.9.0`, in `MelonInfo`, the Nexus draft and the archive name. Deliberately not
+- **Version** — `1.0.0`, in `MelonInfo`, the Nexus draft and the archive name. Deliberately not
   `1.0.0`: R1, R5 and R6 are unverified, so calling it 1.0 would be a claim not yet earned. Bump to
   `1.0.0` when they pass, and tag the commit to match.
 - **`Newtonsoft.Json`** — **verified, not assumed.** MelonLoader 0.7.3 ships `13.0.4` in all three
@@ -377,7 +377,7 @@ with no extra steps.
   is absent (an IL2CPP-only build would silently ship with no UI at all), and prints the archive
   contents back for inspection.
 
-Current output: `release/Schedule-I-Cookbook-0.9.0.zip`, 88.8 KB, containing `LICENSE`,
+Current output: `release/Schedule-I-Cookbook-1.0.0.zip`, 88.8 KB, containing `LICENSE`,
 `README.txt` and the five DLLs under `Mods/`.
 
 ---
@@ -399,7 +399,7 @@ Current output: `release/Schedule-I-Cookbook-0.9.0.zip`, 88.8 KB, containing `LI
 known-limitations section.
 
 **Copy written:** [07-NEXUS-PAGE.md](07-NEXUS-PAGE.md) — paste-ready description, the form fields,
-permissions set to match the licence, and a 0.9.0 changelog. It leads on "you never log
+permissions set to match the licence, and a 1.0.0 changelog. It leads on "you never log
 anything" and "it never writes to your save", and carries the fail-closed hook check as the
 differentiator, per the notes above.
 
@@ -443,7 +443,7 @@ running game**, which is the one thing this could not do.
 
 One sitting, in this order:
 
-1. **Default (IL2CPP) branch.** Extract `release/Schedule-I-Cookbook-0.9.0.zip` over the game folder
+1. **Default (IL2CPP) branch.** Extract `release/Schedule-I-Cookbook-1.0.0.zip` over the game folder
    — that also discharges R7's exit test and R4's walkthrough. Launch, check the log for
    `Symbol check PASSED`, `Production tracking ENABLED` and `IL2CPP branch detected`. Cook one
    batch, confirm exactly one `Production Detected`, then quit to menu and open

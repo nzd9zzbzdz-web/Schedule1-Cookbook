@@ -10,7 +10,7 @@ using RecipePlanner.UI;
 // mod managers, so they must match the Nexus page exactly. "Cookbook" rather than "Recipe Planner":
 // planning and optimisation are not built yet, and a name that promises them invites the complaint.
 // See docs/05-RELEASE-ROADMAP.md R2.
-[assembly: MelonInfo(typeof(RecipePlanner.Mod.RecipePlannerMod), "Schedule I Cookbook", "0.9.0", "Sean")]
+[assembly: MelonInfo(typeof(RecipePlanner.Mod.RecipePlannerMod), "Schedule I Cookbook", "1.0.0", "Sean")]
 [assembly: MelonGame("TVGS", "Schedule I")]
 
 namespace RecipePlanner.Mod

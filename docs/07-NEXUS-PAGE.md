@@ -15,7 +15,7 @@ still unwritten is multiplayer (R6).
 | **Name** | Schedule I Cookbook |
 | **Summary** | An automatic cookbook, production record and mixing guide, read from your own save. Never writes to it. Requires the `alternate` branch. |
 | **Category** | Miscellaneous (or Gameplay, if Nexus has no better fit for Schedule I) |
-| **Version** | 0.9.0 |
+| **Version** | 1.0.0 |
 | **Requirements** | MelonLoader v0.7.3 · Schedule I on the **`alternate` (Mono) Steam branch** |
 | **Licence** | All rights reserved — see [LICENSE](../LICENSE) |
 
@@ -266,7 +266,7 @@ one deciding whether anyone clicks at all.
 
 ---
 
-## Changelog for 0.9.0
+## Changelog for 1.0.0
 
 First public release.
 

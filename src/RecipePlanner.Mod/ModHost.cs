@@ -91,6 +91,25 @@ namespace RecipePlanner.Mod
 
             existing = ReconcileAgainstSave(context, existing);
 
+            // Point the catalogue at this save and drop anything cached for the previous one,
+            // before any repair reads it. This used to happen at the end of the method, which was
+            // fine while nothing here needed the game's own data — it is not fine now that the
+            // pending-name repair does.
+            if (_cookbookData != null) _cookbookData.SaveFolderPath = context.SavePath;
+            _cookbookData?.Invalidate();
+            _prices?.Invalidate();
+
+            // Batches whose naming event we never saw. Must run before the two repairs below:
+            // both skip pending batches by design, so giving them a product first is what lets
+            // them be placed and priced in the same load rather than staying stranded.
+            var named = ResolvePendingNames(existing);
+            if (named > 0)
+            {
+                _history.Rewrite(existing);
+                _log.Info($"Named {named} batch(es) from the game's own recipe list — their naming " +
+                          "was never seen by the mod.");
+            }
+
             // Recipes recorded before their mix was named have no output product, which makes them
             // unplaceable in the lineage tree. Repaired here rather than on write, because the ones
             // already on disk would otherwise stay broken until that exact recipe was cooked again.
@@ -124,11 +143,6 @@ namespace RecipePlanner.Mod
                 _log.Info("Some batches are waiting for their mix to be named; they will be " +
                           "credited to the product as soon as you name it in game.");
 
-            // The phone app pulls from here whenever it opens, so it always reflects the log
-            // rather than holding a snapshot of its own.
-            if (_cookbookData != null) _cookbookData.SaveFolderPath = context.SavePath;
-            _cookbookData?.Invalidate();
-            _prices?.Invalidate();
 
             // Mix maps are randomised per save, so a guide built for the previous character is
             // not merely stale — it is wrong.
@@ -288,6 +302,40 @@ namespace RecipePlanner.Mod
         /// Batches still awaiting a name are skipped. There is nothing to price them against yet,
         /// which is the entire reason they are pending.
         /// </summary>
+        /// <summary>
+        /// Gives an identity to batches whose naming event the mod never saw.
+        ///
+        /// The live path (<see cref="OnMixNamed"/>) only fires if the mod is loaded and hooked at
+        /// the exact moment the player types the name. Every batch that misses that window is
+        /// stranded: with no product it cannot be priced or placed, and both load-time repairs skip
+        /// pending batches by design. Nothing else ever came back for them.
+        ///
+        /// The game's recipe list has held the answer all along, so this asks it instead of waiting.
+        ///
+        /// A null graph means the catalogue could not be read, and is deliberately treated as "do
+        /// not repair". Naming batches from data we could not load is the one outcome worse than
+        /// leaving them pending.
+        /// </summary>
+        private int ResolvePendingNames(List<ProductionEvent> events)
+        {
+            if (_cookbookData == null || events == null) return 0;
+            if (!PendingNameResolver.HasPending(events)) return 0;
+
+            try
+            {
+                var graph = _cookbookData.TryBuildGraph(_recipes);
+                if (graph == null) return 0;
+
+                return PendingNameResolver.ResolveFromRecipes(
+                    events, graph.Steps, _cookbookData.DisplayNameOf);
+            }
+            catch (Exception ex)
+            {
+                _log.Warn("Could not name pending batches from the recipe list: " + ex.Message);
+                return 0;
+            }
+        }
+
         private int RepriceZeroValued(List<ProductionEvent> events)
         {
             if (_pricing == null || events == null) return 0;

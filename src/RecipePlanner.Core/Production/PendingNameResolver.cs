@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using RecipePlanner.Core.Recipes;
 
 namespace RecipePlanner.Core.Production
 {
@@ -37,6 +38,68 @@ namespace RecipePlanner.Core.Production
 
                 e.OutputProductId = productId;
                 e.OutputProductName = productName ?? productId;
+                e.WasNewDiscovery = true;
+                applied++;
+            }
+            return applied;
+        }
+
+        /// <summary>
+        /// Names pending batches from the game's own recipe list, rather than waiting for the
+        /// naming event to arrive.
+        ///
+        /// <see cref="Apply"/> only ever runs while the player is typing the name, which makes the
+        /// whole repair depend on catching one live event. Miss it — the mod was installed after
+        /// the mix, the hook attached late, the naming happened in a session the mod did not see —
+        /// and the batch is stranded permanently: it has no product, so it cannot be priced, cannot
+        /// be placed under a strain, and every load-time repair pass skips it precisely *because*
+        /// it is pending. Nothing ever came back for it.
+        ///
+        /// Observed on a real save: four consecutive invented mixes, each one demonstrably named by
+        /// the player — the next cook used that name as its base — all four still recorded as
+        /// unnamed and worth zero.
+        ///
+        /// The game knew the answer the whole time. Each step carries base + additive to output, so
+        /// a pending batch can simply be looked up. Steps come from <see cref="RecipeGraph"/>
+        /// because it has already done the hard part: the game stores roughly one row in five with
+        /// its sides reversed, and reading them by field name would invert the recipe.
+        /// </summary>
+        /// <param name="nameOf">Resolves a product id to its display name; may return null.</param>
+        public static int ResolveFromRecipes(
+            IEnumerable<ProductionEvent> events,
+            IEnumerable<ResolvedStep> steps,
+            Func<string, string> nameOf = null)
+        {
+            if (events == null || steps == null) return 0;
+
+            var outputOf = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var step in steps)
+            {
+                if (step == null) continue;
+                if (string.IsNullOrEmpty(step.BaseProductId) || string.IsNullOrEmpty(step.AdditiveId)) continue;
+                if (string.IsNullOrEmpty(step.OutputProductId)) continue;
+
+                // A self-loop (thickdick + paracetamol -> thickdick) is a real row, but it says the
+                // mix produced no new product. Naming a pending batch after its own base would
+                // invent an identity the player never gave it.
+                if (Same(step.OutputProductId, step.BaseProductId)) continue;
+
+                var key = step.BaseProductId + "|" + step.AdditiveId;
+                if (!outputOf.ContainsKey(key)) outputOf[key] = step.OutputProductId;
+            }
+
+            if (outputOf.Count == 0) return 0;
+
+            var applied = 0;
+            foreach (var e in events)
+            {
+                if (e == null || !e.IsAwaitingName) continue;
+                if (string.IsNullOrEmpty(e.BaseProductId) || string.IsNullOrEmpty(e.IngredientId)) continue;
+
+                if (!outputOf.TryGetValue(e.BaseProductId + "|" + e.IngredientId, out var productId)) continue;
+
+                e.OutputProductId = productId;
+                e.OutputProductName = nameOf == null ? productId : (nameOf(productId) ?? productId);
                 e.WasNewDiscovery = true;
                 applied++;
             }

@@ -92,6 +92,31 @@ namespace RecipePlanner.UI
             return model;
         }
 
+        /// <summary>
+        /// The lineage graph on its own, for callers that need to ask what a mix produces without
+        /// drawing anything.
+        ///
+        /// Exposed so the load-time repair can name batches the game already has an answer for.
+        /// Returns null when the catalogue could not be read, which the caller must treat as "do
+        /// not repair" rather than "nothing to repair" — guessing identities from an unreadable
+        /// catalogue is exactly the failure this is meant to prevent.
+        /// </summary>
+        public RecipeGraph TryBuildGraph(IRecipeRepository recipes)
+        {
+            EnsureCatalog();
+            if (_catalog == null) return null;
+
+            try { return BuildGraph(recipes); }
+            catch (Exception ex)
+            {
+                _log.Error("Could not build the recipe graph: " + ex);
+                return null;
+            }
+        }
+
+        /// <summary>The game's own display name for a product id, or the id when unknown.</summary>
+        public string DisplayNameOf(string productId) => Name(productId);
+
         private void EnsureCatalog()
         {
             if (_catalog != null) return;
