@@ -54,17 +54,25 @@ namespace RecipePlanner.PhoneApp
             UiSkin.Clear();
             CookbookScreen.ForgetEffectColours();
 
-            // A real app first, and the in-Products panel only if that fails.
+            // The standalone app is OFF, and stays off until it is proven safe.
             //
-            // The app is the better result — its own icon on the home screen, exactly like the Mono
-            // build — but it is also the riskier one: it derives from ProductManagerApp and has to
-            // hand the singleton back, and getting that wrong costs the player their Products
-            // screen rather than merely costing them ours. The panel needs no subclassing at all
-            // and is known to work, so it stays as the floor rather than being deleted.
-            if (TryInstallStandaloneApp()) return true;
+            // Injection worked. The app installed. Then opening the phone killed the process.
+            //
+            // The cause is in the log immediately before the crash: "nothing captured from the
+            // template (0 fields)". CaptureAppWiring reflects over FIELDS by name, and an Il2Cpp
+            // proxy does not have them — the real values sit behind properties, with the fields
+            // reduced to NativeFieldInfoPtr_* handles. So the app was built with a null
+            // appContainer and a null _screen, and the first frame that touched them dereferenced
+            // a null native pointer. That is a hard process kill, not a managed exception, which is
+            // why nothing caught it and nothing was logged.
+            //
+            // Fixable — capture through properties on this branch — but the failure mode is the
+            // game closing, so the bar for switching it back on is not "it installs". It is that
+            // the phone opens, the app opens, the Products app still opens, and none of that
+            // changes after a save reload. Until then the panel is what ships: it subclasses
+            // nothing, inherits nothing, and cannot crash a phone it is not part of.
+            if (StandaloneAppEnabled && TryInstallStandaloneApp()) return true;
 
-            RecipePlannerUI.Log?.Info(
-                "Falling back to the Cookbook panel inside the Products app.");
             return CookbookEmbed.TryInstall();
 #else
 
@@ -121,6 +129,14 @@ namespace RecipePlanner.PhoneApp
         }
 
 #if IL2CPP
+        /// <summary>
+        /// Off. See the note at the call site: it crashed the game on opening the phone.
+        ///
+        /// Kept as a switch rather than deleted so the work survives and the reasoning stays with
+        /// it — but it is <c>false</c>, and the panel is what ships.
+        /// </summary>
+        private static readonly bool StandaloneAppEnabled = false;
+
         private static bool _standaloneInstalled;
 
         /// <summary>
