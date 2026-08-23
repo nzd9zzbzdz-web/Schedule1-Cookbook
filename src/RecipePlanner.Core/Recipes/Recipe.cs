@@ -147,16 +147,7 @@ namespace RecipePlanner.Core.Recipes
             // parentless recipe: PendingNameResolver would repair the *events*, this method would
             // be called again with the now-named event, and the one field that identifies what the
             // recipe actually produces stayed blank forever.
-            //
-            // Blank-only, never overwrite: a recipe id is base + steps, so two runs of the same
-            // recipe must produce the same product. A differing value means something is wrong
-            // upstream and silently taking the newer one would hide it.
-            if (string.IsNullOrEmpty(recipe.OutputProductId) && !string.IsNullOrEmpty(evt.OutputProductId))
-                recipe.OutputProductId = evt.OutputProductId;
-            if (string.IsNullOrEmpty(recipe.DrugType) && !string.IsNullOrEmpty(evt.DrugType))
-                recipe.DrugType = evt.DrugType;
-            if (string.IsNullOrEmpty(recipe.BaseProductId) && !string.IsNullOrEmpty(evt.BaseProductId))
-                recipe.BaseProductId = evt.BaseProductId;
+            Backfill(recipe, evt.OutputProductId, evt.DrugType, evt.BaseProductId, recipe.Name);
 
             recipe.Status |= RecipeStatus.Produced;
             recipe.TimesProduced++;
@@ -203,9 +194,39 @@ namespace RecipePlanner.Core.Recipes
             recipe.Status |= RecipeStatus.Discovered;
             if (recipe.DiscoveredUtc == null) recipe.DiscoveredUtc = whenUtc;
 
+            // The same back-fill OnProduced does, and for the same reason. A recipe first recorded
+            // from an unnamed mix has no product; if the game later announces that recipe, this is
+            // the moment its identity becomes knowable. Without it the record stays parentless even
+            // though the answer arrived — and a recipe with no output cannot be placed in the
+            // lineage tree, which is what puts it under "origin unknown".
+            Backfill(recipe, outputProductId, null, baseProductId, outputName);
+
             _repo.Upsert(recipe);
             if (isNew) RecipeDiscovered?.Invoke(recipe);
             return recipe;
+        }
+
+        /// <summary>
+        /// Fills in what a recipe could not know when it was first recorded.
+        ///
+        /// Blank-only, never overwriting. A recipe id is base + steps, so the same recipe must
+        /// always yield the same product; a differing value means something is wrong upstream, and
+        /// quietly taking the newer one would hide it.
+        /// </summary>
+        private static void Backfill(
+            Recipe recipe, string outputProductId, string drugType, string baseProductId, string name)
+        {
+            if (string.IsNullOrEmpty(recipe.OutputProductId) && !string.IsNullOrEmpty(outputProductId))
+                recipe.OutputProductId = outputProductId;
+
+            if (string.IsNullOrEmpty(recipe.DrugType) && !string.IsNullOrEmpty(drugType))
+                recipe.DrugType = drugType;
+
+            if (string.IsNullOrEmpty(recipe.BaseProductId) && !string.IsNullOrEmpty(baseProductId))
+                recipe.BaseProductId = baseProductId;
+
+            if (string.IsNullOrEmpty(recipe.Name) && !string.IsNullOrEmpty(name))
+                recipe.Name = name;
         }
 
         private static List<string> BuildSteps(ProductionEvent evt)
