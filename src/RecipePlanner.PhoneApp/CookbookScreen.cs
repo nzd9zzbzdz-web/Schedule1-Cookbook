@@ -1958,10 +1958,15 @@ namespace RecipePlanner.PhoneApp
             row.GetWorldCorners(corners);
 
             var topLeft = (Vector2)_root.InverseTransformPoint(corners[1]);
-            var bottomRight = (Vector2)_root.InverseTransformPoint(corners[3]);
 
+            // Left-aligned to the row it belongs to. It used to be measured back from the row's
+            // right edge, which put it over the price and the addictiveness bar — the two columns
+            // most likely to be the reason the row is being looked at in the first place. The left
+            // of a row carries the icon and the name, which the card repeats in its own title
+            // anyway, so covering that costs nothing.
             var rootRect = _root.rect;
-            var x = Mathf.Min(bottomRight.x - CardWidth - 56f, rootRect.xMax - CardWidth - 8f);
+            var x = topLeft.x + 24f;
+            x = Mathf.Min(x, rootRect.xMax - CardWidth - 8f);
             x = Mathf.Max(x, rootRect.xMin + 8f);
 
             var y = topLeft.y;
