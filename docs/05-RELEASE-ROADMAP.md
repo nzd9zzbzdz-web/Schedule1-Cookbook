@@ -432,6 +432,7 @@ differentiator, per the notes above.
 | R10 unguarded reflection | ✅ 30/30 hooks, enforced by a test |
 | R11 ingredient costs | ✅ recorded at pricing time, 5 tests |
 | R14 unnamed-mix value | ✅ priced at naming, and repaired on load |
+| R15 stale dedup keys | ✅ seeding now replaces rather than accumulates |
 
 Everything that could be done without launching the game is done. **Every remaining item needs a
 running game**, which is the one thing this could not do.
@@ -776,3 +777,25 @@ on load, and only rewrites the log when something actually gained a value.
 
 A batch that genuinely prices to zero is indistinguishable from one never priced, so the repair
 retries it harmlessly rather than recording a guess.
+
+---
+
+## R15 — A rolled-back batch could never be re-recorded ✅
+
+The seen-key set is an in-memory mirror of the event log, seeded on each save load. It accumulated
+rather than replacing, and was never cleared.
+
+That defeated the rollback path completely, within a single game session:
+
+1. Cook a batch at day 40 16:00. Its key goes into the set.
+2. Quit to menu without saving.
+3. Reload. The save's clock reads 15:07, so `RollbackReconciler` correctly drops the abandoned
+   batch from disk — exactly as designed.
+4. The station replays and genuinely produces the batch again.
+5. The tracker rejects it as a duplicate, against a key that now exists **only in memory**.
+
+The batch is then lost outright. That is a worse outcome than the double-counting the reconciler was
+written to prevent, and it was invisible: the log simply says `Production ignored (DuplicateEvent)`,
+which is what it says when the mechanism is working correctly.
+
+`Seed` now clears first, so the set cannot outlive the log it mirrors. 4 tests.
