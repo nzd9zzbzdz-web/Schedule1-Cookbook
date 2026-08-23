@@ -958,7 +958,7 @@ namespace RecipePlanner.PhoneApp
                     view._stripe.color = isHot ? CardFillHot : view._restFill;
 
                     if (view._entry == null) return;
-                    if (isHot) view._screen.ShowEffects(view.Root, view._entry, view._font);
+                    if (isHot) view._screen.ShowEffects(view._entry, view._font);
                     else if (view._screen._pinnedProductId == null) view._screen.HideEffects();
                 };
 
@@ -974,7 +974,7 @@ namespace RecipePlanner.PhoneApp
                         var id = view._entry.ProductId;
 
                         if (screen._pinnedProductId == id) { screen._pinnedProductId = null; screen.HideEffects(); }
-                        else { screen._pinnedProductId = id; screen.ShowEffects(view.Root, view._entry, view._font); }
+                        else { screen._pinnedProductId = id; screen.ShowEffects(view._entry, view._font); }
                     }
                     catch (Exception ex) { RecipePlannerUI.Log?.Warn("Effects card failed: " + ex.Message); }
                 });
@@ -1908,9 +1908,9 @@ namespace RecipePlanner.PhoneApp
         }
 
         /// <summary>Shows the card for one entry, positioned beside the row it belongs to.</summary>
-        private void ShowEffects(RectTransform row, CookbookEntry entry, Font font)
+        private void ShowEffects(CookbookEntry entry, Font font)
         {
-            if (_effectsCard == null || entry == null || row == null) return;
+            if (_effectsCard == null || entry == null) return;
 
             var effects = entry.Effects ?? new List<string>();
             _effectsTitle.text = effects.Count > 0
@@ -1942,38 +1942,33 @@ namespace RecipePlanner.PhoneApp
                        + Mathf.Max(effects.Count, 0) * (ChipHeight + ChipGap) + CardPad;
             _effectsCard.sizeDelta = new Vector2(CardWidth, height);
 
-            PositionCardBeside(row, height);
+            PositionCard(height);
             _effectsCard.gameObject.SetActive(true);
             _effectsCard.SetAsLastSibling();
         }
 
         /// <summary>
-        /// Places the card to the right of the row, flipping it up when it would run off the
-        /// bottom of the screen. Both rects are converted through world space because the row lives
-        /// inside a scrolling container and the card does not.
+        /// Parks the card against the right edge of the panel, vertically centred.
+        ///
+        /// It used to track the hovered row, which meant it moved on every hover and — for rows
+        /// near the top — rode up into the header, covering the toolbar and the Mix Guide button.
+        /// A fixed position solves both, and reads better besides: running down a list, the eye
+        /// stops having to re-find the card each time it changes.
+        ///
+        /// Clamped rather than trusted. A card taller than the panel would otherwise hang off both
+        /// ends, and the effect count is the player's data, not a number this file controls.
         /// </summary>
-        private void PositionCardBeside(RectTransform row, float height)
+        private void PositionCard(float height)
         {
-            var corners = new Vector3[4];
-            row.GetWorldCorners(corners);
-
-            var topLeft = (Vector2)_root.InverseTransformPoint(corners[1]);
-
-            // Pinned to the right of the panel, not measured from the row.
-            //
-            // Measuring from the row put it wherever that row happened to end, which is why it kept
-            // landing over the middle of the list. Anchoring to the panel edge means it appears in
-            // the same place every time — and a card that does not move between rows is far easier
-            // to read down a list with, since the eye stops re-finding it on every hover.
             var rootRect = _root.rect;
-            var x = rootRect.xMax - CardWidth - 24f;
-            x = Mathf.Max(x, rootRect.xMin + 8f);
 
-            var y = topLeft.y;
-            if (y - height < rootRect.yMin + 8f) y = rootRect.yMin + 8f + height;
-            y = Mathf.Min(y, rootRect.yMax - 8f);
+            var x = Mathf.Max(rootRect.xMax - CardWidth - 24f, rootRect.xMin + 8f);
 
-            _effectsCard.anchoredPosition = new Vector2(x - rootRect.xMin, y - rootRect.yMax);
+            // anchoredPosition is measured from the panel's top-left, since that is the card's
+            // anchor and pivot; the halves are what centre it on the panel's own middle.
+            var top = Mathf.Min(height * 0.5f, rootRect.yMax - 8f);
+
+            _effectsCard.anchoredPosition = new Vector2(x - rootRect.xMin, top - rootRect.yMax);
         }
 
         private void HideEffects()
