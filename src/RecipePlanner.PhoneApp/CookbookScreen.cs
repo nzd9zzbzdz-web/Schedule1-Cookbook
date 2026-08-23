@@ -1959,14 +1959,14 @@ namespace RecipePlanner.PhoneApp
 
             var topLeft = (Vector2)_root.InverseTransformPoint(corners[1]);
 
-            // Left-aligned to the row it belongs to. It used to be measured back from the row's
-            // right edge, which put it over the price and the addictiveness bar — the two columns
-            // most likely to be the reason the row is being looked at in the first place. The left
-            // of a row carries the icon and the name, which the card repeats in its own title
-            // anyway, so covering that costs nothing.
+            // Pinned to the right of the panel, not measured from the row.
+            //
+            // Measuring from the row put it wherever that row happened to end, which is why it kept
+            // landing over the middle of the list. Anchoring to the panel edge means it appears in
+            // the same place every time — and a card that does not move between rows is far easier
+            // to read down a list with, since the eye stops re-finding it on every hover.
             var rootRect = _root.rect;
-            var x = topLeft.x + 24f;
-            x = Mathf.Min(x, rootRect.xMax - CardWidth - 8f);
+            var x = rootRect.xMax - CardWidth - 24f;
             x = Mathf.Max(x, rootRect.xMin + 8f);
 
             var y = topLeft.y;
