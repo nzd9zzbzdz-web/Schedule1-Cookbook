@@ -224,30 +224,46 @@ namespace RecipePlanner.Game.Binding
         }
 
         /// <summary>
-        /// True on the Mono ("alternate") Steam branch, where the game ships a real
-        /// <c>Assembly-CSharp</c>. False on the default IL2CPP branch, where MelonLoader instead
-        /// generates <c>Il2CppScheduleOne.*</c> proxies.
+        /// True on the Mono ("alternate") Steam branch, where the game ships real
+        /// <c>ScheduleOne.*</c> types. False on the default IL2CPP branch, where MelonLoader
+        /// generates <c>Il2CppScheduleOne.*</c> proxies instead.
         ///
-        /// Only the phone UI cares: it links Assembly-CSharp directly and therefore cannot load at
-        /// all under IL2CPP. Tracking is reflection-based and runs identically on both, so this
-        /// must never be used to gate anything other than the UI.
+        /// Chooses which of the two phone-app builds is loaded, and nothing else. Tracking is
+        /// reflection-based and runs identically on both branches.
         ///
-        /// Detection is by assembly name rather than by probing for a type, because a type probe
-        /// cannot distinguish "wrong branch" from "hook table went stale" — and those two want
-        /// very different messages.
+        /// <b>This used to check for an assembly named <c>Assembly-CSharp</c> and could never
+        /// return false.</b> MelonLoader names the generated proxy assembly <c>Assembly-CSharp</c>
+        /// too, so the name is identical on both branches and the check was answering a question
+        /// about file names when the real question was about type names. The visible result was the
+        /// mod announcing "Mono branch detected" on IL2CPP and then failing to load the UI five
+        /// times with <c>Could not load type 'ScheduleOne.UI.App`1'</c>.
+        ///
+        /// So it asks the runtime what a known game type is actually called. The earlier objection
+        /// to probing — that a failed probe cannot tell "wrong branch" from "stale hook table" —
+        /// does not apply here: this runs only after <see cref="Verify"/> has already passed, so
+        /// the type is known to exist and the only open question is its name.
         /// </summary>
         public static bool IsMonoBranch(IEnumerable<Assembly> gameAssemblies)
         {
-            foreach (var asm in gameAssemblies ?? Enumerable.Empty<Assembly>())
+            var list = gameAssemblies as IList<Assembly> ?? gameAssemblies?.ToList();
+            if (list == null || list.Count == 0) return false;
+
+            var probe = ResolveType(list, HookTable.NsPlayer + "Player");
+            if (probe?.FullName != null)
+                return !probe.FullName.StartsWith(Il2CppPrefix, StringComparison.Ordinal);
+
+            // Nothing resolved, which Verify should already have caught. Fall back to looking for
+            // the proxy assemblies by name and assume IL2CPP if any are present — guessing Mono
+            // here would load a UI build that cannot possibly work.
+            foreach (var asm in list)
             {
                 string name;
                 try { name = asm.GetName().Name; }
                 catch { continue; }
 
-                if (name.StartsWith("Assembly-CSharp", StringComparison.OrdinalIgnoreCase))
-                    return true;
+                if (name.StartsWith(Il2CppPrefix, StringComparison.OrdinalIgnoreCase)) return false;
             }
-            return false;
+            return true;
         }
     }
 }

@@ -12,3 +12,7 @@ release/
 # Il2CppProbe is a measuring instrument; its output is never shipped.
 tools/Il2CppProbe/bin/
 tools/Il2CppProbe/obj/
+
+# The Mono UI build, kept so a package can be produced from either branch.
+# Tracked deliberately — see docs/08-IL2CPP-PLAN.md on the two-branch build.
+!prebuilt/
