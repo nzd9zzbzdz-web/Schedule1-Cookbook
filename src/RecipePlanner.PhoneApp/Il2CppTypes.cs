@@ -39,23 +39,32 @@ namespace RecipePlanner.PhoneApp
             _done = true;
 
 #if IL2CPP
-            // CookbookApp is deliberately NOT registered. It cannot be: its base is
-            // App<CookbookApp>, and IL2CPP would need that class to exist before CookbookApp can be
-            // made, while that class cannot be made until CookbookApp exists. Confirmed on a
-            // running game — the two types below registered without complaint in the same pass that
-            // CookbookApp failed, which is what proved the problem is the generic base and not the
-            // mechanism. This branch uses CookbookEmbed instead, which subclasses nothing.
-            // One question, asked once, acting on nothing. See CookbookAppProbe.
-            CookbookAppProbe.Ask();
+            // CookbookApp -- the Mono class -- is deliberately NOT registered. It cannot be:
+            // its base is App<CookbookApp>, and IL2CPP would need that class to exist before
+            // CookbookApp can be made, while that class cannot be made until CookbookApp does.
+            //
+            // CookbookAppIl2Cpp is a different matter. Its base is ProductManagerApp, a
+            // concrete class the game already created, which is the same shape as the two
+            // MonoBehaviours below and injects just as readily. Registering it is what makes
+            // AddComponent<CookbookAppIl2Cpp> possible; without this the standalone app fails
+            // with a type-initializer error from AddComponent and falls back to the panel.
+            var app = Register<CookbookAppIl2Cpp>("CookbookAppIl2Cpp");
 
             var scroll = Register<SmoothScroll>("SmoothScroll");
             var glow = Register<HoverGlow>("HoverGlow");
 
+            // The app is not required. It is the better result, but the panel inside the Products
+            // app needs only the two MonoBehaviours, so a failure to inject the app costs the icon
+            // and nothing else — and the installer already falls back.
             _succeeded = scroll && glow;
 
             if (_succeeded)
             {
-                RecipePlannerUI.Log?.Info("IL2CPP type injection succeeded — the Cookbook panel can be built.");
+                RecipePlannerUI.Log?.Info(
+                    app
+                        ? "IL2CPP type injection succeeded — the Cookbook can be its own app."
+                        : "IL2CPP type injection succeeded for the UI, but not for the app itself — " +
+                          "the Cookbook will open from a button inside the Products app.");
             }
             else
             {
