@@ -162,4 +162,7 @@ The source is public so you can see exactly what the mod does to your machine an
 so it can be reused. Please do not re-upload it, bundle it, or reuse the code. **Contributions are
 not being accepted**, so please do not open pull requests.
 
-If you want to do something with it, ask first.
+If you want to do something with it, ask first — I say yes more often than no.
+
+And if I ever go quiet and stop updating this, ask me and I'll almost certainly hand it over rather
+than let it rot.

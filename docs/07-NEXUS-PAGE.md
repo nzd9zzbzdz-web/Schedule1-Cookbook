@@ -48,6 +48,9 @@ Pick one.
 >
 > If you want to do any of that, just ask me first. I'm not precious about it, I'd just like to know
 > where my work is going and be able to fix it if it breaks. I say yes more often than no.
+>
+> And if I ever go quiet and stop updating this, ask me and I'll almost certainly hand it over
+> rather than let it rot.
 
 **Longer — if you want it on the page itself as well:**
 
@@ -66,15 +69,18 @@ Pick one.
 > around on another site, silently recording wrong numbers with my name on it, is bad for whoever
 > downloaded it and bad for me.
 >
+> And if I ever go quiet and stop updating this, ask me and I'll almost certainly hand it over
+> rather than let it rot. I'd rather someone else kept it working than have it die quietly with a
+> broken hook table.
+>
 > So: ask. I'm genuinely easy to deal with, and the answer is usually yes.
 
-**Optional line — recommended, but entirely your call:**
+Both versions now carry the hand-it-over line, at the author's decision. It defuses the single most
+common objection to a restrictive licence — *"what happens when you abandon it?"* — and commits you
+to nothing: you are still the one being asked, and "almost certainly" is not "definitely".
 
-> If I ever go quiet and stop updating this, ask me and I'll almost certainly hand it over rather
-> than let it rot.
-
-That one sentence defuses the single most common objection to a restrictive licence ("what happens
-when you abandon it?"), and commits you to nothing — you are still the one being asked.
+Keep it in both places if you use both. An assurance that appears on the page but not in the
+permissions box looks like it was quietly withdrawn.
 
 ### Replies you will need later
 
