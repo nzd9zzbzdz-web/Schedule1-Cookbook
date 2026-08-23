@@ -127,6 +127,7 @@ namespace RecipePlanner.PhoneApp
             var go = UiInterop.NewRect(PanelName);
             var rect = go.GetComponent<RectTransform>();
             rect.SetParent(container, false);
+            Unmanaged(go);
 
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
@@ -139,6 +140,11 @@ namespace RecipePlanner.PhoneApp
             var backdrop = go.AddComponent<Image>();
             backdrop.color = Backdrop;
             backdrop.raycastTarget = true;
+
+            // Clips the cookbook to the panel. Without it the screen's own content escaped the
+            // phone entirely and drew across the game world — the list is taller than the panel by
+            // design, and nothing else here was stopping it.
+            go.AddComponent<RectMask2D>();
 
             go.SetActive(false);
             _screen = CookbookScreen.CreateInto(rect);
@@ -154,6 +160,7 @@ namespace RecipePlanner.PhoneApp
             var go = UiInterop.NewRect(ButtonName);
             var rect = go.GetComponent<RectTransform>();
             rect.SetParent(container, false);
+            Unmanaged(go);
 
             rect.anchorMin = new Vector2(1f, 1f);
             rect.anchorMax = new Vector2(1f, 1f);
@@ -211,6 +218,33 @@ namespace RecipePlanner.PhoneApp
                 // they were using for something else.
                 RecipePlannerUI.Log?.Error("Cookbook refresh failed: " + ex);
                 _panel.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// Opts a child out of the parent's layout, so our own anchors are what position it.
+        ///
+        /// The Products app's container drives its children with a layout group. Adding two objects
+        /// to it therefore did not place them where their anchors said — the group treated them as
+        /// two more rows, which stretched the button across the full width of the app and gave the
+        /// panel a size that let the cookbook draw straight out of the phone and across the game
+        /// world.
+        ///
+        /// A LayoutElement with ignoreLayout tells the group to leave the object alone. Harmless
+        /// when there is no group to ignore, which is why it is applied unconditionally rather than
+        /// after probing for one — the component that caused this does not even resolve to a name
+        /// through the Il2Cpp proxies, so probing for it would be guesswork.
+        /// </summary>
+        private static void Unmanaged(GameObject go)
+        {
+            try
+            {
+                var element = go.AddComponent<LayoutElement>();
+                element.ignoreLayout = true;
+            }
+            catch (Exception ex)
+            {
+                RecipePlannerUI.Log?.Warn("Could not opt out of the app's layout: " + ex.Message);
             }
         }
 
