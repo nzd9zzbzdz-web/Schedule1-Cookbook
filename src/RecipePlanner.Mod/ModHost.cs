@@ -142,7 +142,8 @@ namespace RecipePlanner.Mod
             // Said out loud on every load, not only in co-op. Which side of a session the mod
             // thinks it is on decides how every later batch gets attributed, and reading it back
             // from the log beats inferring it from whether the numbers came out plausible.
-            _log.Info($"Session role: {(context.IsHost ? "host or single-player" : "guest in another player's world")}.");
+            _log.Info($"Session role: {(context.IsHost ? "host or single-player" : "guest in another player's world")}" +
+                      $" · branch: {context.Branch ?? "unknown"} · save written by: {context.GameVersion ?? "unknown"}.");
 
             if (PendingNameResolver.HasPending(existing))
                 _log.Info("Some batches are waiting for their mix to be named; they will be " +

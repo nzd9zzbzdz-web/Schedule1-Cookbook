@@ -22,6 +22,7 @@ namespace RecipePlanner.Game.Binding
         private readonly Type _loadManagerType;
         private readonly Type _playerType;
         private readonly Type _lobbyType;
+        private readonly string _branch;
 
         public SaveContextReader(IEnumerable<Assembly> assemblies, ILog log)
         {
@@ -31,6 +32,11 @@ namespace RecipePlanner.Game.Binding
             _loadManagerType = SymbolGuard.ResolveType(list, HookTable.NsPersist + "LoadManager");
             _playerType = SymbolGuard.ResolveType(list, HookTable.NsPlayer + "Player");
             _lobbyType = SymbolGuard.ResolveType(list, HookTable.NsNet + "Lobby");
+
+            // Settled once, here, because it cannot change while the game is running — and because
+            // the event log needs to say which branch produced a batch. The save's own GameVersion
+            // cannot answer that: it records whichever branch last wrote the save.
+            _branch = SymbolGuard.IsMonoBranch(list) ? "Mono" : "IL2CPP";
         }
 
         /// <summary>True once the game reports a fully loaded save.</summary>
@@ -71,6 +77,7 @@ namespace RecipePlanner.Game.Binding
             var isHost = _lobbyType == null || Reflect.GetBool(Singleton(_lobbyType), "IsHost", true);
 
             var context = SaveFolderReader.BuildContext(folder, steamId, slot, isHost);
+            if (context != null) context.Branch = _branch;
             if (context == null)
             {
                 var info = SaveFolderReader.Read(folder, steamId);

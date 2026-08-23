@@ -22,7 +22,24 @@ namespace RecipePlanner.Core.Identity
         /// <summary>Player.Local.PlayerCode — the SteamID64 of whoever is at this keyboard.</summary>
         public string LocalPlayerCode { get; set; }
 
+        /// <summary>
+        /// The game version recorded in the SAVE, which is the version that last WROTE it —
+        /// not necessarily the one running now. A save written on one branch and then loaded
+        /// on the other carries the old string, so this identifies the save's provenance
+        /// rather than the session's. See <see cref="Branch"/> for what is actually running.
+        /// </summary>
         public string GameVersion { get; set; }
+
+        /// <summary>
+        /// Which scripting backend is running: "Mono" or "IL2CPP".
+        ///
+        /// Detected live, unlike <see cref="GameVersion"/>. Observed on a real save: an event
+        /// cooked on the default branch recorded "0.4.6f13 Alternate", because the save had
+        /// last been written on Mono. The mod supports both branches and behaves differently
+        /// on each, so a bug report needs to say which one produced the batch — and a field
+        /// that names the wrong one is worse than no field at all.
+        /// </summary>
+        public string Branch { get; set; }
 
         /// <summary>
         /// Trust annotations, stamped onto every event. A save that later enables the debug console

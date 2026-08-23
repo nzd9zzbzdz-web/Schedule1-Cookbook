@@ -150,6 +150,9 @@ namespace RecipePlanner.Core.Production
         public DateTime RealTimeUtc { get; set; }
 
         public string GameVersion { get; set; }
+
+        /// <summary>Which scripting backend produced this batch: "Mono" or "IL2CPP".</summary>
+        public string Branch { get; set; }
         public bool ConsoleEnabled { get; set; }
         public bool RandomizedMixMaps { get; set; }
 
