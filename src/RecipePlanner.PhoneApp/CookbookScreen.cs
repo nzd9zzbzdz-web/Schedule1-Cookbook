@@ -1214,36 +1214,41 @@ namespace RecipePlanner.PhoneApp
             {
                 var f = hidden ? DimFactor : 1f;
 
+                // Every one of these is null-checked. The chain slots and the overflow label are
+                // built ON DEMAND — most rows never need them — so a row is not a fixed set of
+                // objects, and treating it as one threw a NullReferenceException out of Bind.
+                //
+                // That aborted the bind halfway: the name and price had been written, the icons and
+                // the origin label had not, and the row rendered as a white square with a stray
+                // "unknown" under it. A row that dims itself must never be able to stop a row from
+                // drawing at all.
                 _name.color = Fade(_entry.IsFavourite ? Favourite : NameText, f);
                 _value.color = Fade(PriceText, f);
                 _stats.color = Fade(StatText, f);
-                _addiction.color = Fade(_addiction.color, hidden ? DimFactor : 1f);
                 _unknownOrigin.color = Fade(ChainText, f);
-                _overflow.color = Fade(ChainText, f);
 
-                _productIcon.color = Fade(Color.white, f);
-                _baseIcon.color = Fade(_baseIcon.color, 1f, hidden);
+                if (_addiction != null) _addiction.color = Fade(_addiction.color, f);
+                if (_overflow != null) _overflow.color = Fade(ChainText, f);
+
+                // Icons keep their own alpha — Apply() shows and hides them with SetActive, and
+                // overwriting alpha here would fight that.
+                if (_productIcon != null) _productIcon.color = Fade(Color.white, f);
+                if (_baseIcon != null) _baseIcon.color = Fade(Color.white, f);
 
                 foreach (var slot in _additive)
-                    if (slot != null) slot.color = Fade(slot.color, 1f, hidden);
+                    if (slot != null) slot.color = Fade(Color.white, f);
 
                 foreach (var plus in _plus)
                     if (plus != null) plus.color = Fade(ChainText, f);
 
-                _barFillImage.color = Fade(_barFillImage.color, hidden ? DimFactor : 1f);
-                _barGlowImage.color = Fade(_barGlowImage.color, hidden ? 0.3f : 1f);
+                if (_barFillImage != null) _barFillImage.color = Fade(_barFillImage.color, f);
+                if (_barGlowImage != null)
+                    _barGlowImage.color = Fade(_barGlowImage.color, hidden ? 0.3f : 1f);
             }
 
             /// <summary>Keeps alpha, scales brightness.</summary>
             private static Color Fade(Color colour, float factor) =>
                 new Color(colour.r * factor, colour.g * factor, colour.b * factor, colour.a);
-
-            /// <summary>
-            /// For sprites already carrying their own colour: drops alpha instead of brightness,
-            /// which is what reads as "set aside" on artwork rather than on text.
-            /// </summary>
-            private static Color Fade(Color colour, float factor, bool hidden) =>
-                new Color(colour.r, colour.g, colour.b, hidden ? IconDimAlpha : 1f);
 
             /// <summary>
             /// Hides the entry from this list only. The recipe stays in the game and keeps its
@@ -1303,15 +1308,6 @@ namespace RecipePlanner.PhoneApp
                 _hideGlyph.text = entry.IsHidden ? "+" : "x";
                 _hideGlyph.color = entry.IsHidden ? Neon : ChainText;
 
-                // A hidden row stays in the list, dimmed. It is the only honest way to show that
-                // the recipe still exists: removing it outright looked like deletion, and left the
-                // player no visible way to undo something they had not meant to do.
-                //
-                // The whole row fades together — name, price, chain and meter — so it reads as one
-                // set-aside thing rather than a row with some parts missing. The restore button
-                // deliberately does NOT fade; it is the way back and has to stay findable.
-                ApplyDimming(entry.IsHidden);
-
                 var known = entry.OriginKnown;
                 _unknownOrigin.gameObject.SetActive(!known);
 
@@ -1346,6 +1342,12 @@ namespace RecipePlanner.PhoneApp
                 {
                     _overflow.gameObject.SetActive(false);
                 }
+
+                // LAST, deliberately. A hidden row stays in the list dimmed rather than vanishing —
+                // removing it outright looked like deletion and left no visible way back. Dimming
+                // has to run after every other part of the bind, because each of those writes its
+                // own colour and would otherwise undo the fade on whatever it touched.
+                ApplyDimming(entry.IsHidden);
             }
 
             /// <summary>An icon with no artwork is switched off rather than drawn as a white box.</summary>
@@ -2164,7 +2166,6 @@ namespace RecipePlanner.PhoneApp
 
         /// <summary>How far a hidden row is dimmed. Low enough to read as set aside, high enough to stay legible.</summary>
         private const float DimFactor = 0.42f;
-        private const float IconDimAlpha = 0.35f;
 
         // Green, and much softer than the first attempt: the card sits over the list, so a strong
         // halo bleeds into the rows behind it and makes both harder to read.
