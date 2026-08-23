@@ -52,7 +52,7 @@ is only meaningful if nobody has cloned it, and cannot claw back a copy that was
 
 ---
 
-## R1 — Survive the default (IL2CPP) branch 🟡 code done, needs a live IL2CPP run
+## R1 — Survive the default (IL2CPP) branch 🟡 Mono half confirmed live; IL2CPP half untested
 
 ### The problem
 
@@ -128,7 +128,7 @@ The **static** half of the exit test passes:
 | `RecipePlanner.dll` references | `Core`, `Game`, `UI`, MelonLoader, 0Harmony — **no `PhoneApp`** |
 | `RecipePlanner.UI.dll` references | `netstandard` only — no Unity, no `ScheduleOne`, no `Assembly-CSharp` |
 | `RecipePlanner.PhoneApp.dll` | still carries every game reference, now quarantined behind the loader |
-| `dotnet test` | 220 passing (208 + 3 branch-detection + 9 report tests) |
+| `dotnet test` | 221 passing (208 + 3 branch-detection + 10 report tests) |
 | `dist/` payload | `RecipePlanner.dll`, `Core`, `Game`, **`UI`**, `PhoneApp` |
 
 Bonus: with the game references gone, `RecipePlanner.Mod` dropped from `netstandard2.1` back to
@@ -415,16 +415,17 @@ differentiator, per the notes above.
 | Step | State |
 |---|---|
 | R0 repo | ✅ done |
-| R1 IL2CPP blocker | 🟡 code done and statically verified; **needs a live run on both branches** |
+| R1 IL2CPP blocker | 🟡 **Mono half confirmed live**; IL2CPP half still untested |
 | R2 scope / naming | ✅ done |
 | R3 documentation | ✅ done |
 | R4 install guide | ✅ written; **needs one clean-install walkthrough** |
-| R5 pricing | 🟡 members verified offline (16/16) and silent-failure fixed; needs one live run |
+| R5 pricing | ✅ `Prices loaded: 18 products, 198 ingredients` on a live save |
 | R6 multiplayer | ⬜ **needs a live host + client session** |
 | R7 packaging | 🟡 done; **needs the extract-and-launch check** |
 | R8 page copy | 🟡 written; **needs screenshots** |
-| R9 default-branch value | ✅ readable `cookbook.md` export, 9 tests |
+| R9 default-branch value | ✅ `cookbook.md` confirmed written live with real data |
 | R10 unguarded reflection | ⬜ documented, not a blocker |
+| R11 ingredient costs | ⬜ documented, not a blocker |
 
 Everything that could be done without launching the game is done. **Every remaining item needs a
 running game**, which is the one thing this could not do.
@@ -449,6 +450,85 @@ One sitting, in this order:
 5. Bump `MelonInfo` to `1.0.0`, re-run `pwsh tools/package.ps1`, tag the commit, publish.
 
 If step 1 fails, everything else waits — that is still the blocker.
+
+## First live run — 2026-08-23, Mono branch
+
+What the session proved, and what it broke.
+
+### Confirmed working
+
+| | Evidence |
+|---|---|
+| Symbol check | `Symbol check PASSED (16/16 hooks resolved)` — including the new pricing hooks |
+| Patching | MixingStation + Mk2 `MixingDone`/`MixingStart`, `ProductManager.FinishAndNameMix` |
+| Branch detection | `Mono branch detected — the Cookbook app will appear on the phone.` |
+| Cookbook app | Installed and rendered — 71 products, 67 recipes, first draw 8 tiles |
+| Production tracking | Two `Production Detected` events across two saves |
+| Recipe discovery | `New recipe discovered: Purple Express [thickmonkey>mouthwash]` |
+| **Pricing (R5)** | **`Prices loaded: 18 products, 198 ingredients.`** — non-zero, so R5's core question is answered |
+| **Report (R9)** | `cookbook.md` written for every profile, with real recipes, chains, effects and totals |
+
+R1's Mono half, R5 and R9 are all effectively closed. **The IL2CPP half of R1 is still untested.**
+
+### Bug found: the app vanished on the second save
+
+Loading a second save in the same session left the phone with no Cookbook app. The log shows it
+plainly — `Cookbook app installed on the phone.` at 09:21:13 for save *Charlie*, and nothing at all
+at 09:24:45 for save *Delta*.
+
+**Cause.** `CookbookAppInstaller` is correctly idempotent — `IsInstalled` checks
+`_installed && CookbookApp.Instance != null`, so it detects that the previous app object was
+destroyed with the previous save and would happily rebuild. It just never got asked:
+`RecipePlannerMod._appInstalled` latched `true` on the first install and was only ever cleared in
+`OnDeinitializeMelon`, i.e. at shutdown.
+
+Pre-existing, not introduced by the R1 refactor — but preserved by it.
+
+**Fix.** Clear the latch whenever no save is loaded, so the next load reinstalls.
+
+`PhoneAppLoader` was hardened at the same time: a single install exception used to disable the UI
+permanently for the session, which matters far more now that installs happen once per save load. It
+now tolerates 5 failures before giving up, because "the phone was mid-scene-change" and "the UI
+genuinely cannot build" are different problems.
+
+### Report defects found by real data
+
+Two, both fixed:
+
+1. **`$0.00` on unpriced rows.** Unnamed mixes have no price, and printed `$0.00` next to products
+   with real figures — reading as "worthless" rather than "unpriced". The unavailable/zero
+   distinction now holds **per row**, not just per table.
+2. **Profit was read from a stored field.** `Totals.EstimatedProfit` is stored, unlike
+   `ProductStat.Profit` which is derived. The report now derives it, so value, cost and profit
+   always add up on screen.
+
+---
+
+## R11 — Ingredient costs are never attributed ⬜ *(not a release blocker)*
+
+`IngredientStat.TotalCost` is declared, rendered by the report when non-zero, and **never populated**.
+`StatisticsService.FoldIngredients` sets `TimesUsed` and `UnitsConsumed` and nothing else, so the
+report's ingredient Cost column silently never appears. Confirmed live: total cost read `$420.00`
+while every per-ingredient cost read zero.
+
+**Why it is not a one-line fix.** `PricingEngine` computes `UnitCost` as the *sum* over the whole
+ingredient chain and stores only that total on the event. Per-ingredient cost cannot be recovered
+from the event log afterwards, and `StatisticsService` is deliberately a pure fold over events with
+no price source — a property worth keeping, because it is what makes every statistic rebuildable.
+
+**Options, in order of preference:**
+
+1. Record per-ingredient unit costs on the event at pricing time (a forward-only schema addition;
+   old events simply lack it and render as unknown). Exact, and keeps the fold pure.
+2. Attribute the batch cost evenly across the chain. Cheap, and wrong whenever ingredient prices
+   differ — which is most of the time. **Not recommended**: a plausible wrong number is the failure
+   this project keeps deciding against.
+3. Leave it, and drop the unused field so nothing implies data that does not exist.
+
+Currently behaves as option 3 by accident — the column is hidden because it is always zero, so
+nothing wrong is displayed. That is why this is not a blocker.
+
+---
 
 ## R10 — The rest of the unguarded reflection ⬜ *(not a release blocker)*
 

@@ -64,6 +64,32 @@ namespace RecipePlanner.Core.Tests
             Assert.Contains("40", text);   // the non-monetary facts still show
         }
 
+        /// <summary>
+        /// Real data from a live save surfaced this: unnamed mixes have no price, so they rendered
+        /// "$0.00" in a table alongside products with real figures — reading as "worthless" rather
+        /// than "unpriced". The unavailable/zero distinction has to hold per row, not just per table.
+        /// </summary>
+        [Fact]
+        public void An_unpriced_product_shows_a_dash_not_zero()
+        {
+            var stats = new PlayerStatistics
+            {
+                Personal = new Totals { UnitsProduced = 120, Batches = 6, TotalValue = 5400, TotalCost = 420 },
+                ByProduct = new Dictionary<string, ProductStat>
+                {
+                    ["priced"] = new ProductStat { ProductId = "priced", DisplayName = "Mega Smegma", Units = 100, Batches = 5, Value = 5400, Cost = 420 },
+                    ["unpriced"] = new ProductStat { ProductId = "unpriced", DisplayName = "Unnamed mix (a + b)", Units = 20, Batches = 1, Value = 0, Cost = 0 },
+                }
+            };
+
+            var text = CookbookReport.Render("Echo", stats, new Recipe[0], Now);
+
+            Assert.Contains("$5,400.00", text);           // the priced one still shows
+            Assert.DoesNotContain("$0.00", text);         // the unpriced one must not claim zero
+            Assert.Contains("Unnamed mix (a + b)", text); // but is still listed
+            Assert.Contains("—", text);
+        }
+
         [Fact]
         public void Real_prices_are_shown()
         {

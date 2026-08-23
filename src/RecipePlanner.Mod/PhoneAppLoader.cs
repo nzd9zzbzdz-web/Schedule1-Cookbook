@@ -24,9 +24,13 @@ namespace RecipePlanner.Mod
 
         private readonly ILog _log;
 
+        /// <summary>Install throws tolerated before the UI is written off for this session.</summary>
+        private const int MaxInstallFailures = 5;
+
         private MethodInfo _tryInstall;
         private bool _resolved;
         private bool _givenUp;
+        private int _failures;
 
         public PhoneAppLoader(ILog log)
         {
@@ -63,8 +67,23 @@ namespace RecipePlanner.Mod
                 // Unwrap: reflection reports the callee's failure as the inner exception, and the
                 // outer TargetInvocationException says nothing useful.
                 var real = (ex as TargetInvocationException)?.InnerException ?? ex;
-                _log.Error("Cookbook app failed to install; tracking is unaffected. " + real);
-                _givenUp = true;
+                _failures++;
+
+                // Bounded rather than permanent. Installing depends on the phone's own objects
+                // existing, so a throw can mean "the UI genuinely cannot build" or merely "asked
+                // during a bad moment of a scene change". Giving up forever on the first one would
+                // cost the player the app for the rest of the session — including on every save
+                // they load afterwards — which is far worse than a few extra log lines.
+                if (_failures >= MaxInstallFailures)
+                {
+                    _givenUp = true;
+                    _log.Error($"Cookbook app failed to install {_failures} times; giving up for this " +
+                               "session. Production tracking is unaffected. " + real);
+                }
+                else
+                {
+                    _log.Warn($"Cookbook app install attempt {_failures} failed; will retry. " + real.Message);
+                }
                 return false;
             }
         }

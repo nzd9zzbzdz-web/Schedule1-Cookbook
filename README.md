@@ -20,7 +20,7 @@ game's own completion events. It never writes to your save.
 **Working in-game**, pre-release. Automatic production tracking is confirmed end-to-end on a live
 session.
 
-- `dotnet test` → **220 passing**
+- `dotnet test` → **221 passing**
 - Hook table verified **16/16** against both the shipped binary and the live IL2CPP proxies
 - Roadmap phases 0, 1, 7, 8, 9, 10, 11, 12, 18 confirmed live
 
@@ -88,7 +88,7 @@ runtime, which is what keeps the mod alive on the IL2CPP branch.
 
 ```bash
 dotnet build -c Release   # also stages the payload into dist\
-dotnet test               # 220 passing
+dotnet test               # 221 passing
 ```
 
 `Newtonsoft.Json` is **not** shipped — MelonLoader provides 13.0.4 on every host.

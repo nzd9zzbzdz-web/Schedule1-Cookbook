@@ -137,6 +137,12 @@ namespace RecipePlanner.Mod
             try { _watcher.Poll(); }
             catch (Exception ex) { LoggerInstance.Error("Save watcher failed: " + ex.Message); }
 
+            // The phone — and the app installed into it — is destroyed and rebuilt with each save.
+            // Clearing the latch on unload is what makes the SECOND save of a session get an app:
+            // CookbookAppInstaller is idempotent and would have handled the reinstall happily, but
+            // it never got asked, because this flag latched true on the first save and stayed there.
+            if (_host != null && !_host.IsGameLoaded) _appInstalled = false;
+
             // The phone only exists once a save is in; retry each tick until it takes. Null on the
             // IL2CPP branch, where there is no UI to install.
             if (!_appInstalled && _phoneApp != null && _host != null && _host.IsGameLoaded)

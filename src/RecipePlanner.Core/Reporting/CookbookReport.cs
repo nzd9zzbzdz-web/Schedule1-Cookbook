@@ -75,7 +75,11 @@ namespace RecipePlanner.Core.Reporting
             {
                 Row(sb, "Value", Money(t.TotalValue));
                 Row(sb, "Cost", Money(t.TotalCost));
-                Row(sb, "Estimated profit", Money(t.EstimatedProfit));
+
+                // Derived rather than read from Totals.EstimatedProfit, which is a stored field and
+                // can therefore disagree with the two numbers printed directly above it. Three
+                // figures on screen that do not add up destroy confidence in all of them.
+                Row(sb, "Estimated profit", Money(t.TotalValue - t.TotalCost));
             }
             else
             {
@@ -116,7 +120,16 @@ namespace RecipePlanner.Core.Reporting
                   .Append(" | ").Append(Num(p.Units))
                   .Append(" | ").Append(Num(p.Batches))
                   .Append(" | ").Append(Date(p.LastProducedUtc));
-                if (money) sb.Append(" | ").Append(Money(p.Value)).Append(" | ").Append(Money(p.Profit));
+
+                // Per ROW, not just per table. A product the game has no price for — an unnamed mix,
+                // typically — would otherwise print "$0.00" next to products that have real figures,
+                // which reads as "this one is worthless" rather than "this one is unpriced".
+                if (money)
+                {
+                    var priced = p.Value > 0 || p.Cost > 0;
+                    sb.Append(" | ").Append(priced ? Money(p.Value) : Unknown)
+                      .Append(" | ").Append(priced ? Money(p.Profit) : Unknown);
+                }
                 sb.Append(" |\n");
             }
         }
@@ -298,6 +311,9 @@ namespace RecipePlanner.Core.Reporting
         private static string Num(long n) => n.ToString("N0", Inv);
 
         private static string Money(double d) => "$" + d.ToString("N2", Inv);
+
+        /// <summary>Shown where a figure is genuinely unknown, never as a stand-in for zero.</summary>
+        private const string Unknown = "—";
 
         private static string Date(DateTime utc) =>
             utc == default(DateTime) ? "—" : utc.ToString("yyyy-MM-dd", Inv);
