@@ -44,10 +44,13 @@ Release readiness is tracked in [05-RELEASE-ROADMAP.md](docs/05-RELEASE-ROADMAP.
 
 | Step | What is left |
 |---|---|
-| R1 | Live confirmation on **both** Steam branches — the code is done and statically verified |
-| R5 | Live confirmation that prices load; the code is written but its failure mode is a silent `$0` |
+| R1 | Mono branch confirmed live; the **IL2CPP branch is still untested** |
 | R6 | Multiplayer client-vs-host behaviour needs testing and documenting |
 | R8 | Screenshots |
+
+Confirmed on a live save (2026-08-23, Mono): 16/16 symbol check, patching, branch detection, the
+Cookbook app, production tracking across two saves, recipe discovery,
+`Prices loaded: 18 products, 198 ingredients`, and `cookbook.md` written with real data.
 
 ## Which Steam branch?
 
