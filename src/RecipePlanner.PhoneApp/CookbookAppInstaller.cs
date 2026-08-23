@@ -1,8 +1,13 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+#if IL2CPP
+using Il2CppScheduleOne.UI;
+using Il2CppScheduleOne.UI.Phone.ProductManagerApp;
+#else
 using ScheduleOne.UI;
 using ScheduleOne.UI.Phone.ProductManagerApp;
+#endif
 using RecipePlanner.UI;
 
 namespace RecipePlanner.PhoneApp

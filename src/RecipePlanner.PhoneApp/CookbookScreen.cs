@@ -49,7 +49,7 @@ namespace RecipePlanner.PhoneApp
             // Everything goes inside ONE root rather than as loose siblings. If the template left a
             // LayoutGroup on the container it would override the position of every direct child,
             // so the screen owns a single child it fully controls the inside of.
-            var root = new GameObject("CookbookRoot", typeof(RectTransform)).GetComponent<RectTransform>();
+            var root = UiInterop.NewRect("CookbookRoot").GetComponent<RectTransform>();
             root.SetParent(appContainer, false);
             root.anchorMin = Vector2.zero;
             root.anchorMax = Vector2.one;
@@ -273,7 +273,7 @@ namespace RecipePlanner.PhoneApp
 
             // The only work that happens while scrolling. Rebinding a handful of pooled rows is
             // cheap; rebuilding a layout tree of a thousand objects was not.
-            _scroll.onValueChanged.AddListener(_ => UpdateWindow());
+            UiInterop.OnScrollChanged(_scroll, _ => UpdateWindow());
 
             PrewarmPool(font);
             DiagnoseVisibility(backgroundImage);
@@ -864,7 +864,7 @@ namespace RecipePlanner.PhoneApp
 
                 var button = tile.Root.gameObject.AddComponent<Button>();
                 button.targetGraphic = tile._border;
-                button.onClick.AddListener(() =>
+                UiInterop.OnClick(button, () =>
                 {
                     try { screen.SelectStrain(rootProductId, rootProductId != null); }
                     catch (Exception ex) { RecipePlannerUI.Log?.Warn("Strain select failed: " + ex.Message); }
@@ -972,7 +972,7 @@ namespace RecipePlanner.PhoneApp
                 var rowButton = view.Root.gameObject.AddComponent<Button>();
                 rowButton.targetGraphic = view._stripe;
                 rowButton.transition = Selectable.Transition.None;   // the stripe carries row banding
-                rowButton.onClick.AddListener(() =>
+                UiInterop.OnClick(rowButton, () =>
                 {
                     try
                     {
@@ -1274,7 +1274,7 @@ namespace RecipePlanner.PhoneApp
                 var clickable = button.gameObject.AddComponent<Button>();
                 clickable.targetGraphic = image;
                 clickable.colors = ButtonColours;
-                clickable.onClick.AddListener(() =>
+                UiInterop.OnClick(clickable, () =>
                 {
                     try
                     {
@@ -1430,7 +1430,7 @@ namespace RecipePlanner.PhoneApp
             var clickable = button.gameObject.AddComponent<Button>();
             clickable.targetGraphic = image;
             clickable.colors = ButtonColours;
-            clickable.onClick.AddListener(() => { try { onClick(); } catch { } });
+            UiInterop.OnClick(clickable, () => { try { onClick(); } catch { } });
 
             _pills[text] = new ToolPill { Body = image, Label = text };
 
@@ -1803,7 +1803,7 @@ namespace RecipePlanner.PhoneApp
             var clickable = button.gameObject.AddComponent<Button>();
             clickable.targetGraphic = image;
             clickable.colors = ButtonColours;
-            clickable.onClick.AddListener(() =>
+            UiInterop.OnClick(clickable, () =>
             {
                 try
                 {
@@ -2258,7 +2258,7 @@ namespace RecipePlanner.PhoneApp
 
         private static RectTransform CreateChild(RectTransform parent, string name)
         {
-            var go = new GameObject(name, typeof(RectTransform));
+            var go = UiInterop.NewRect(name);
             var rect = go.GetComponent<RectTransform>();
             rect.SetParent(parent, false);
             return rect;

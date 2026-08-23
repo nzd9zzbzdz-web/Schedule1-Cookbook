@@ -1,6 +1,10 @@
 using System;
 using UnityEngine;
+#if IL2CPP
+using Il2CppScheduleOne.UI;
+#else
 using ScheduleOne.UI;
+#endif
 using RecipePlanner.UI;
 
 namespace RecipePlanner.PhoneApp
@@ -34,7 +38,13 @@ namespace RecipePlanner.PhoneApp
         /// singleton registration in the base MUST still run, so base.Awake() is called after our
         /// fields are set, since Start builds the home-screen icon from them.
         /// </summary>
+#if IL2CPP
+        // PlayerSingleton<T>.Awake is protected on Mono and public on the Il2Cpp proxies.
+        // C# forbids narrowing access when overriding, so the modifier has to follow suit.
+        public override void Awake()
+#else
         protected override void Awake()
+#endif
         {
             Configure();
             base.Awake();
@@ -54,7 +64,11 @@ namespace RecipePlanner.PhoneApp
             AppIcon = AppIconFactory.Cookbook();
         }
 
+#if IL2CPP
+        public override void Start()
+#else
         protected override void Start()
+#endif
         {
             Configure();
             base.Start();

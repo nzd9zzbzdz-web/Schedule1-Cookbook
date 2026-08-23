@@ -159,3 +159,81 @@ Steps 1–3 are done. The remaining sequence, with the cheap parts first:
 Steps 4 and 5 take the probe from 12 errors to 1 without ever leaving the Mono branch, and that
 remaining 1 is the blocker the clone approach is designed to route around. The branch switch is
 only needed once there is something to run.
+
+---
+
+## Steps 4 and 5 done — the probe reads zero
+
+```
+dotnet build tools/Il2CppProbe
+    0 Error(s)
+Il2CppProbe.dll  86,528 bytes
+```
+
+**The entire phone app now compiles against the IL2CPP proxies**, `CookbookApp : App<CookbookApp>`
+included. The Mono build stayed green throughout and all 283 tests still pass.
+
+### First, a correction
+
+The measured section above claimed `CookbookScreen.cs` and three other files "compile clean" and
+that 77% of the UI was already branch-agnostic. That was wrong, and wrong in the flattering
+direction. Those files had no errors *reported yet* — the compiler stops doing semantic analysis on
+code whose types failed to resolve, so fixing the early errors revealed later ones. The count went
+12 → 7 → 14 → 0, not 12 → 0. The final number is real; the intermediate optimism was not.
+
+### What actually differed between the branches
+
+Four things, and only four:
+
+1. **Namespace.** `ScheduleOne.*` is `Il2CppScheduleOne.*`. Conditional using-directives, plus one
+   fully-qualified `Registry` call behind a `using GameRegistry =` alias.
+
+2. **Override access.** `App<T>.Start` and `PlayerSingleton<T>.Awake` are `protected` on Mono and
+   `public` on the proxies, and C# forbids narrowing access when overriding.
+
+3. **Unity's EventSystems interfaces are emitted as classes**, so a `MonoBehaviour` cannot also
+   implement them. `HoverGlow` and `SmoothScroll` drop the interfaces on IL2CPP and go inert:
+   `SmoothScroll` never sets `_gliding` so its `LateUpdate` returns immediately and the `ScrollRect`
+   handles the wheel itself, and `HoverGlow` stays at its rest colour. The cost is a hover effect
+   and eased scrolling — not function.
+
+4. **`UnityAction` is a class, not a delegate**, so lambdas cannot be handed to `AddListener`
+   without being marshalled first. Collected in [`UiInterop`](../src/RecipePlanner.PhoneApp/UiInterop.cs)
+   along with `new GameObject(name, typeof(T))`, which wants a native type array on IL2CPP and is
+   simply written as construct-then-add instead — identical in effect, and it compiles on both
+   branches with no conditional at all.
+
+That seam is one small file. The alternative was `#if` scattered through two thousand lines of
+layout code, where a branch-specific bug could hide indefinitely.
+
+### The blocker was not what this document said it was
+
+This plan opened by asserting that subclassing `App<T>` was the thing to route around, and proposed
+an elaborate clone-and-patch approach to avoid it. **`CookbookApp : App<CookbookApp>` compiles
+against the proxies without complaint.** The clone-and-patch design was solving a problem that does
+not exist at compile time.
+
+It may still exist at *runtime*, which is the part worth being careful about. The real question was
+never whether the C# compiler accepts the declaration — it is whether
+`ClassInjector.RegisterTypeInIl2Cpp<CookbookApp>()` succeeds for a managed type whose base is an
+IL2CPP generic instantiation. Compiling proves the shapes line up. It proves nothing about
+injection, and injection is where Il2CppInterop is known to be weakest.
+
+So the honest position: the port is much further along than expected, one genuine unknown remains,
+and it can only be answered by running it.
+
+Also settled along the way, from a compiler error rather than a guess: `App<T>` **does** derive from
+`PlayerSingleton<T>` — the override error named `PlayerSingleton<CookbookApp>.Awake()` directly. The
+plan listed that as unconfirmed. The singleton concern is real if the clone approach is ever needed.
+
+### What is left
+
+| # | Step | Needs the branch? |
+|---|---|---|
+| 6 | Try direct injection — register `CookbookApp` and see whether it takes | **Yes** |
+| 7 | If injection fails, fall back to clone-and-patch as described above | Yes |
+| 8 | Confirm tracking actually fires live, not just that its symbols resolve | Yes |
+
+Step 6 is now a ten-minute experiment rather than a rewrite: the code already builds, so it is one
+launch and one log line. That is a very different proposition from where this document started, and
+it is the point at which the branch switch finally earns its 7 GB.

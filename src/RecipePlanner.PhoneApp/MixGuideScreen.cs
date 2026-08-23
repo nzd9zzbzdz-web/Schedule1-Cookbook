@@ -323,7 +323,7 @@ namespace RecipePlanner.PhoneApp
 
             row.Click.onClick.RemoveAllListeners();
             var captured = id;
-            row.Click.onClick.AddListener(() => { try { Select(captured); Populate(); } catch { } });
+            UiInterop.OnClick(row.Click, () => { try { Select(captured); Populate(); } catch { } });
 
             y -= RowHeight + RowGap;
         }
@@ -652,7 +652,7 @@ namespace RecipePlanner.PhoneApp
 
             var button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
-            button.onClick.AddListener(() => { try { onClick(); } catch { } });
+            UiInterop.OnClick(button, () => { try { onClick(); } catch { } });
 
             HoverGlow.Attach(rect.gameObject, glow, GlowRest, GlowHot);
             return text;
@@ -676,7 +676,7 @@ namespace RecipePlanner.PhoneApp
 
         private static RectTransform New(RectTransform parent, string name)
         {
-            var go = new GameObject(name, typeof(RectTransform));
+            var go = UiInterop.NewRect(name);
             var rect = go.GetComponent<RectTransform>();
             rect.SetParent(parent, false);
             return rect;

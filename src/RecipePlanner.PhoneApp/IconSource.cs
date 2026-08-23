@@ -1,9 +1,17 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+#if IL2CPP
+using GameRegistry = Il2CppScheduleOne.Registry;
+using Il2CppScheduleOne.DevUtilities;
+using Il2CppScheduleOne.ItemFramework;
+using Il2CppScheduleOne.Product;
+#else
+using GameRegistry = ScheduleOne.Registry;
 using ScheduleOne.DevUtilities;
 using ScheduleOne.ItemFramework;
 using ScheduleOne.Product;
+#endif
 using RecipePlanner.UI;
 
 
@@ -88,7 +96,7 @@ namespace RecipePlanner.PhoneApp
         {
             try
             {
-                var definition = ScheduleOne.Registry.GetItem(id);
+                var definition = GameRegistry.GetItem(id);
                 return definition != null ? definition.Icon : null;
             }
             catch (Exception ex)

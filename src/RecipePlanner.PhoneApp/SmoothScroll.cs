@@ -21,7 +21,17 @@ namespace RecipePlanner.PhoneApp
     /// Dragging is left entirely to the ScrollRect: this steps aside while a drag is in progress
     /// and resyncs afterwards, so the two never fight over the content position.
     /// </summary>
+    //
+    // The interfaces are Mono-only. Il2CppInterop emits Unity's EventSystems handler
+    // interfaces as CLASSES, so a MonoBehaviour cannot also implement them — see
+    // docs/08-IL2CPP-PLAN.md. Without them this component simply never receives events:
+    // _gliding stays false, LateUpdate returns immediately, and the ScrollRect handles the
+    // wheel with its own default behaviour. Degraded, not broken.
+#if IL2CPP
+    internal sealed class SmoothScroll : MonoBehaviour
+#else
     internal sealed class SmoothScroll : MonoBehaviour, IScrollHandler, IBeginDragHandler, IEndDragHandler
+#endif
     {
         public ScrollRect Target;
 

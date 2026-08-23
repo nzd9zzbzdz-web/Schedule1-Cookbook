@@ -509,7 +509,7 @@ namespace RecipePlanner.PhoneApp
 
             var button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
-            button.onClick.AddListener(() => { try { Close(); } catch { } });
+            UiInterop.OnClick(button, () => { try { Close(); } catch { } });
 
             HoverGlow.Attach(rect.gameObject, glow, GlowRest, GlowHot);
         }
@@ -532,7 +532,7 @@ namespace RecipePlanner.PhoneApp
 
         private static RectTransform New(RectTransform parent, string name)
         {
-            var go = new GameObject(name, typeof(RectTransform));
+            var go = UiInterop.NewRect(name);
             var rect = go.GetComponent<RectTransform>();
             rect.SetParent(parent, false);
             return rect;

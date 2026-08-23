@@ -18,7 +18,7 @@
     generated folder works fine, which is what makes the probe useful before committing to a 7 GB
     branch switch.
 
-    Baseline, measured 2026-08-23 against 0.4.6f13 proxies: 12 distinct errors in 5 of 10 files.
+    Baseline was 12 errors; the port is now at 0. Re-run after any phone-app change to keep it there.
     See docs/08-IL2CPP-PLAN.md for what they are and what they mean.
   -->
 
@@ -30,6 +30,10 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <AssemblyName>Il2CppProbe</AssemblyName>
     <RootNamespace>RecipePlanner.PhoneApp</RootNamespace>
+
+    <!-- What the sources key their conditional using-directives off. The game namespace is
+         ScheduleOne.* on Mono and Il2CppScheduleOne.* on IL2CPP; nothing else differs. -->
+    <DefineConstants>$(DefineConstants);IL2CPP</DefineConstants>
 
     <RepoRoot>$(MSBuildThisFileDirectory)..\..\</RepoRoot>
     <PhoneAppDir>$(RepoRoot)src\RecipePlanner.PhoneApp</PhoneAppDir>

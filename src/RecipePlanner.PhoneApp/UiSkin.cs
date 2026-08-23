@@ -377,7 +377,14 @@ namespace RecipePlanner.PhoneApp
     /// Lerped rather than snapped: an instant colour change reads as a flicker, especially when the
     /// pointer crosses several buttons on the way somewhere else.
     /// </summary>
+    //
+    // Mono-only interfaces; see SmoothScroll for why. Without them the glow never lights,
+    // which costs a hover effect and nothing else.
+#if IL2CPP
+    internal sealed class HoverGlow : MonoBehaviour
+#else
     internal sealed class HoverGlow : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+#endif
     {
         private const float FadeSpeed = 12f;
 
