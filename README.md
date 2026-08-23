@@ -20,8 +20,8 @@ game's own completion events. It never writes to your save.
 **Working in-game**, pre-release. Automatic production tracking is confirmed end-to-end on a live
 session.
 
-- `dotnet test` → **211 passing**
-- Hook table verified **13/13** against both the shipped binary and the live IL2CPP proxies
+- `dotnet test` → **220 passing**
+- Hook table verified **16/16** against both the shipped binary and the live IL2CPP proxies
 - Roadmap phases 0, 1, 7, 8, 9, 10, 11, 12, 18 confirmed live
 
 Real output from a running game:
@@ -57,6 +57,7 @@ Both work, but they do not get the same features.
 |---|---|---|
 | Production tracking, history, statistics | ✅ | ✅ |
 | Automatic recipe discovery | ✅ | ✅ |
+| **Readable `cookbook.md` export** | ✅ | ✅ |
 | **Cookbook app on the in-game phone** | ❌ | ✅ |
 
 The tracking half reaches the game purely by reflection and resolves `ScheduleOne.*` and the
@@ -87,7 +88,7 @@ runtime, which is what keeps the mod alive on the IL2CPP branch.
 
 ```bash
 dotnet build -c Release   # also stages the payload into dist\
-dotnet test               # 211 passing
+dotnet test               # 220 passing
 ```
 
 `Newtonsoft.Json` is **not** shipped — MelonLoader provides 13.0.4 on every host.

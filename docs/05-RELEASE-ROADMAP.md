@@ -111,7 +111,7 @@ The **static** half of the exit test passes:
 | `RecipePlanner.dll` references | `Core`, `Game`, `UI`, MelonLoader, 0Harmony — **no `PhoneApp`** |
 | `RecipePlanner.UI.dll` references | `netstandard` only — no Unity, no `ScheduleOne`, no `Assembly-CSharp` |
 | `RecipePlanner.PhoneApp.dll` | still carries every game reference, now quarantined behind the loader |
-| `dotnet test` | 211 passing (208 + 3 new branch-detection tests) |
+| `dotnet test` | 220 passing (208 + 3 branch-detection + 9 report tests) |
 | `dist/` payload | `RecipePlanner.dll`, `Core`, `Game`, **`UI`**, `PhoneApp` |
 
 Bonus: with the game references gone, `RecipePlanner.Mod` dropped from `netstandard2.1` back to
@@ -221,7 +221,34 @@ check to run alongside R7's live-install test.
 
 ---
 
-## R5 — Verify pricing live ⬜
+## R9 — The default branch had nothing to show ✅
+
+Added after the fact, because it is the thing that most affects whether this release lands well.
+
+**The problem.** R1 made the mod *survive* the default branch. It did not make it *worth
+installing* there. A default-branch player installed it, played, and saw nothing — the phone app is
+Mono-only, and everything the mod recorded went into `events.jsonl` and `stats.json`, which nobody
+wants to read. That is a background service, not a mod, and it would have been reviewed as one.
+
+**The fix.** [`CookbookReport`](../src/RecipePlanner.Core/Reporting/CookbookReport.cs) renders the
+whole thing as readable Markdown — recipes grouped by strain with their ingredient chains, totals,
+per-product and per-ingredient breakdowns, records, and the employee-excluded figures. It is written
+to `cookbook.md` in the profile folder whenever a save unloads.
+
+Pure Core: no I/O, no game types, no clock of its own, so it is fully tested (9 tests) without
+launching anything. It is also genuinely useful on the Mono branch — a cookbook you can keep, search
+properly, or paste to someone.
+
+**Money is omitted rather than zeroed.** If prices could not be read, the report says
+"not available" instead of printing `$0.00`. A confident wrong number is worse than an admitted gap.
+
+**Exit test:** on the default branch, after cooking a batch and quitting to menu,
+`%APPDATA%\Schedule1RecipePlanner\profiles\<id>\cookbook.md` exists and describes the batch.
+*(Needs a live run, like everything else remaining.)*
+
+---
+
+## R5 — Verify pricing live 🟡 statically verified; needs one live run
 
 [`GamePriceSource`](../src/RecipePlanner.Game/Binding/GamePriceSource.cs) is written and reads
 `ProductManager.ProductPrices` and `Registry.ItemDictionary` reflectively, but Phase 5 is still
@@ -237,6 +264,42 @@ is the kind of thing that gets reported as "mod is broken".
 
 **Exit test:** cook a batch, and the recorded value matches the game's own quoted price within
 rounding. The `Prices loaded` line shows non-zero counts.
+
+### What was found and fixed without the game
+
+**The pricing path was entirely outside the fail-closed guarantee.** The mod's headline safety
+claim — "verifies its hooks and refuses to record numbers it cannot trust" — did not cover pricing
+at all. `ProductManager.ProductPrices`, `AllProducts`, the whole `ScheduleOne.Registry` type,
+and `StorableItemDefinition.BasePurchasePrice` were reached by reflection and never verified. A
+rename in any of them would have left `SymbolGuard` reporting a confident PASS while every money
+figure silently read `$0`.
+
+All four are now in the hook table as **Optional** — verified, but degrading to a warning rather
+than disabling tracking, because prices are a display concern and killing the tracker over a renamed
+price field would be the worse failure.
+
+**Then the member names were checked against the real shipped assemblies**, offline, with
+`tools/HookVerifier` — no game launch needed:
+
+```
+Symbol check PASSED (16/16 hooks resolved)
+```
+
+Every pricing member exists and is spelled correctly in 0.4.5f2. That removes "the names are wrong"
+from the list of things R5 might discover, which was the most likely explanation for the `$0`
+symptom. What is left to test live is only whether the game's singletons are populated at the moment
+the first batch asks — a much narrower question.
+
+**The silent failure itself is fixed.** `GamePriceSource` used to log
+`Prices loaded: 0 products, 0 ingredients` at **Info** level, which reads as success. Now:
+
+- a fully empty load is retried up to 3 times, in case it was simply asked before the game was ready
+- a partially empty load warns which half is missing
+- a permanently empty load warns loudly and says what to check
+- `CookbookReport` omits money entirely rather than rendering `$0.00`
+
+A false zero is worse than an admitted gap, and this is principle 4 of the project applied to the
+one place that was violating it.
 
 ---
 
@@ -336,10 +399,11 @@ differentiator, per the notes above.
 | R2 scope / naming | ✅ done |
 | R3 documentation | ✅ done |
 | R4 install guide | ✅ written; **needs one clean-install walkthrough** |
-| R5 pricing | ⬜ **needs a live run** |
+| R5 pricing | 🟡 members verified offline (16/16) and silent-failure fixed; needs one live run |
 | R6 multiplayer | ⬜ **needs a live host + client session** |
 | R7 packaging | 🟡 done; **needs the extract-and-launch check** |
 | R8 page copy | 🟡 written; **needs screenshots** |
+| R9 default-branch value | ✅ readable `cookbook.md` export, 9 tests |
 
 Everything that could be done without launching the game is done. **Every remaining item needs a
 running game**, which is the one thing this could not do.
@@ -351,8 +415,9 @@ One sitting, in this order:
 1. **Default (IL2CPP) branch.** Extract `release/Schedule-I-Cookbook-0.9.0.zip` over the game folder
    — that also discharges R7's exit test and R4's walkthrough. Launch, check the log for
    `Symbol check PASSED`, `Production tracking ENABLED` and `IL2CPP branch detected`. Cook one
-   batch, confirm exactly one `Production Detected`. **That closes R1's live half** — the thing that
-   was blocking release.
+   batch, confirm exactly one `Production Detected`, then quit to menu and open
+   the profile's `cookbook.md` under %APPDATA%\Schedule1RecipePlanner\ — it should describe
+   that batch (**R9**). **That closes R1's live half**, the thing that was blocking release.
 2. **Same session:** check the log for `Prices loaded: N products, M ingredients` with non-zero
    counts, and compare a recorded batch value against the game's own quoted price. **R5.**
 3. **Switch to the `alternate` branch.** Confirm the Cookbook app still appears — it installs

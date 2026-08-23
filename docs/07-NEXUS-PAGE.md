@@ -56,6 +56,8 @@ employees cook while you are somewhere else.
 - **Automatic production history.** Units, batches, per-product breakdown, ingredient usage.
 - **Recipes discover themselves.** Invent a mix in-game and it appears in the cookbook unprompted.
 - **Employee cooks are tracked but kept separate**, so your personal totals stay yours.
+- **A readable cookbook outside the game.** Your recipes, chains and totals are also written to a
+  `cookbook.md` file you can open in any editor, keep, or share. Works on **both** Steam branches.
 
 ### It will not touch your save
 
@@ -71,7 +73,7 @@ trustworthy.
 Schedule I updates often, and mods that read the game's internals break when it does. Most break
 silently, and quietly record nonsense.
 
-This one checks all 13 of the game functions it depends on **before** it patches anything. If even
+This one checks all 16 of the game symbols it depends on **before** it patches anything. If even
 one has moved, it disables tracking, says so in the log, and records nothing. Wrong statistics are
 worse than no statistics.
 
@@ -83,10 +85,14 @@ Both work. They do not get the same features.
 |---|---|---|
 | Production tracking, history, statistics | ✅ | ✅ |
 | Automatic recipe discovery | ✅ | ✅ |
+| **Readable `cookbook.md` export** | ✅ | ✅ |
 | **Cookbook app on the in-game phone** | ❌ | ✅ |
 
 The tracking half works everywhere. The phone app needs the `alternate` (Mono) branch — it has to
 build UI inside the game, which the default branch's scripting backend makes far harder.
+
+**On the default branch you still get everything except the in-game screen:** tracking runs
+normally, and your cookbook is written to a readable `cookbook.md` you can open any time.
 
 The mod detects your branch at startup and tells you which mode it is in. On the default branch it
 loads and tracks normally; it does not fail.
@@ -113,7 +119,9 @@ Being straight about scope, because the name used to promise more:
 - **No search box** in the cookbook. A text field inside the running game fights your movement keys
   for keyboard focus. Sorting and filters cover the same ground; search comes back when it can be
   done without that trade-off.
-- **Money figures may show `$0`** in some setups — being fixed.
+- **Money figures may be unavailable** in some setups. When the mod cannot read the game's price
+  table it leaves money out entirely rather than showing a confident `$0`; everything else still
+  works.
 
 ### Multiplayer
 
@@ -146,4 +154,4 @@ First public release.
 - Cookbook phone app with strain grouping, ingredient chains, 7 sort orders, filters, favourites
   and hiding (`alternate` branch)
 - Lifetime statistics
-- 13/13 hook verification that fails closed on a game update
+- 16/16 hook verification that fails closed on a game update

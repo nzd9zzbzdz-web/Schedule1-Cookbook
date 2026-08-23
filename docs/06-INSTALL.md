@@ -49,7 +49,7 @@ Launch the game and watch the MelonLoader console, or open
 
 ```
 [Schedule_I_Cookbook] Schedule I Cookbook starting — verifying game symbols before patching.
-[Schedule_I_Cookbook] Symbol check PASSED (13/13 hooks resolved)
+[Schedule_I_Cookbook] Symbol check PASSED (16/16 hooks resolved)
 [Schedule_I_Cookbook] Production tracking ENABLED — waiting for a save to load.
 ```
 
@@ -63,6 +63,7 @@ Both branches work. They do not get the same features.
 |---|---|---|
 | Production tracking, history, statistics | ✅ | ✅ |
 | Automatic recipe discovery | ✅ | ✅ |
+| **Readable `cookbook.md` export** | ✅ | ✅ |
 | **Cookbook app on the in-game phone** | ❌ | ✅ |
 
 The tracking works everywhere. The phone app cannot run on the default branch for a technical
@@ -104,14 +105,28 @@ The mod **never writes to your game saves.** Everything it records is its own, h
 %APPDATA%\Schedule1RecipePlanner\
 └── profiles\
     └── <profile-id>\
+        ├── cookbook.md     ← THE ONE TO OPEN: your cookbook, readable
         ├── events.jsonl     every production event, append-only
-        ├── recipes.json     your cookbook
+        ├── recipes.json     your cookbook, machine-readable
         ├── stats.json       computed totals
         └── profile.json
 ```
 
 Each character gets its own profile, keyed so that deleting a save slot and making a new one in its
 place does not merge the two.
+
+### `cookbook.md` — your cookbook outside the game
+
+Every time a save unloads, the mod writes a readable Markdown file containing your recipes grouped
+by strain with their full ingredient chains, your production totals, per-product and per-ingredient
+breakdowns, and your records.
+
+**On the default branch this is the mod's main output**, since the phone app is Mono-only. It opens
+in any text editor, and renders nicely in anything that understands Markdown — Obsidian, VS Code,
+GitHub, Discord.
+
+It is rewritten from scratch each time, so do not edit it — copy it somewhere else first if you want
+to keep a version. Nothing is lost either way: it is derived entirely from `events.jsonl`.
 
 ## Uninstalling
 
@@ -136,8 +151,9 @@ recording wrong ones. Report it with the log and wait for an update.
 **No Cookbook app on the phone.** Expected on the default branch — see above. On the `alternate`
 branch, check `RecipePlanner.PhoneApp.dll` actually made it into `Mods\`.
 
-**Money figures all show `$0`.** Known, being worked on. It means the mod could not read the game's
-price table; nothing else is affected.
+**No money figures anywhere.** If the mod could not read the game's price table, it says so in the
+log and leaves money out of `cookbook.md` entirely rather than printing a confident `$0`. Units,
+batches and recipes are unaffected. Include the log if you report it.
 
 ### Reporting a bug
 

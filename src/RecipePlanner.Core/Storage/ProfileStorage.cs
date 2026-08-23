@@ -41,6 +41,13 @@ namespace RecipePlanner.Core.Storage
         public string RolledBackLogFile(string profileId) => Path.Combine(ProfileDir(profileId), "rolled-back.jsonl");
         public string StatsFile(string profileId) => Path.Combine(ProfileDir(profileId), "stats.json");
         public string RecipesFile(string profileId) => Path.Combine(ProfileDir(profileId), "recipes.json");
+
+        /// <summary>
+        /// The human-readable export. Deliberately Markdown and deliberately alongside the JSON:
+        /// it is the only thing in this folder a player is expected to open, and on the IL2CPP
+        /// branch — where there is no in-game UI — it is the only output they get at all.
+        /// </summary>
+        public string ReportFile(string profileId) => Path.Combine(ProfileDir(profileId), "cookbook.md");
         public string SnapshotsDir(string profileId) => Path.Combine(ProfileDir(profileId), "snapshots");
 
         public void EnsureProfileDir(string profileId)

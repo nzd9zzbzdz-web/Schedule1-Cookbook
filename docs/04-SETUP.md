@@ -9,7 +9,7 @@
 
   ```
   [Schedule_I_Cookbook] Schedule I Cookbook starting — verifying game symbols before patching.
-  [Schedule_I_Cookbook] Symbol check PASSED (13/13 hooks resolved)
+  [Schedule_I_Cookbook] Symbol check PASSED (16/16 hooks resolved)
   [Schedule_I_Cookbook] Patched ScheduleOne.ObjectScripts.MixingStation.MixingDone()
   [Schedule_I_Cookbook] Patched ScheduleOne.ObjectScripts.MixingStationMk2.MixingDone()
   [Schedule_I_Cookbook] Production tracking ENABLED.
@@ -28,12 +28,12 @@ The only thing left is the Phase 9 acceptance test: load a save and cook one bat
 | `RecipePlanner.UI` | netstandard2.0 | No — view model, data builder, UI seam |
 | `RecipePlanner.Mod` | netstandard2.0 | Only MelonLoader + Harmony |
 | `RecipePlanner.PhoneApp` | netstandard2.1 | **Yes — links Assembly-CSharp; Mono branch only** |
-| `RecipePlanner.Core.Tests` | net10.0 | No — 211 tests |
+| `RecipePlanner.Core.Tests` | net10.0 | No — 220 tests |
 | `tools/HookVerifier` | net10.0 | Reads game assemblies offline |
 
 ```bash
 dotnet build      # also stages the payload into dist\
-dotnet test       # 211 passing
+dotnet test       # 220 passing
 ```
 
 Core, Game and Mod reach the game only by reflection, and `SymbolGuard` resolves both
@@ -109,7 +109,7 @@ Read the MelonLoader console. Expected on success:
 
 ```
 [Schedule_I_Cookbook] Schedule I Cookbook starting — verifying game symbols before patching.
-[Schedule_I_Cookbook] Symbol check PASSED (13/13 hooks resolved)
+[Schedule_I_Cookbook] Symbol check PASSED (16/16 hooks resolved)
 [Schedule_I_Cookbook] Patched ScheduleOne.ObjectScripts.MixingStation.MixingDone()
 [Schedule_I_Cookbook] Patched ScheduleOne.ObjectScripts.MixingStationMk2.MixingDone()
 [Schedule_I_Cookbook] Production tracking ENABLED.

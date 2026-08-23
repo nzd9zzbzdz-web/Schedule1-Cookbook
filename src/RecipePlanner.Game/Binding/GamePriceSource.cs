@@ -26,7 +26,11 @@ namespace RecipePlanner.Game.Binding
         private readonly Dictionary<string, double> _ingredientCosts =
             new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>Attempts allowed before an empty price table is treated as permanent.</summary>
+        private const int MaxLoadAttempts = 3;
+
         private bool _loaded;
+        private int _attempts;
 
         public GamePriceSource(IEnumerable<Assembly> assemblies, ILog log)
         {
@@ -37,10 +41,17 @@ namespace RecipePlanner.Game.Binding
             _registryType = SymbolGuard.ResolveType(list, "ScheduleOne.Registry");
         }
 
-        /// <summary>Drops the cache. Call on save load and when a product is re-priced.</summary>
+        /// <summary>
+        /// Drops the cache. Call on save load and when a product is re-priced.
+        ///
+        /// The attempt counter resets too: a save that gave up on prices must not poison the next
+        /// one, and "the previous character was loaded before the registry was ready" says nothing
+        /// about this character.
+        /// </summary>
         public void Invalidate()
         {
             _loaded = false;
+            _attempts = 0;
             _productValues.Clear();
             _ingredientCosts.Clear();
         }
@@ -63,21 +74,60 @@ namespace RecipePlanner.Game.Binding
             return _ingredientCosts.TryGetValue(ingredientId, out unitCost);
         }
 
+        /// <summary>
+        /// Loading nothing is a real failure, and it used to be invisible: the counts were reported
+        /// at Info level as "Prices loaded", which reads as success even when both were zero, and
+        /// the result is a statistics screen full of confident $0s. Principle 4 of this project is
+        /// fail loudly rather than report something wrong — that has to apply here too.
+        ///
+        /// A wholly empty load is also retried. The first price lookup happens when a batch
+        /// completes, which is normally long after the game's singletons are up, but "asked a
+        /// moment too early" and "the members are gone" are different problems and only one of them
+        /// is permanent. Retries are capped because the load walks every product and item
+        /// definition reflectively, and doing that per batch forever would be a real cost.
+        /// </summary>
         private void EnsureLoaded()
         {
             if (_loaded) return;
-            _loaded = true;   // set first: a failure should not retry on every single batch
+
+            _attempts++;
+            // Latch before doing the work: a throw must not retry on every single batch.
+            _loaded = true;
 
             try
             {
                 LoadProductValues();
                 LoadIngredientCosts();
-                _log.Info($"Prices loaded: {_productValues.Count} products, {_ingredientCosts.Count} ingredients.");
             }
             catch (Exception ex)
             {
                 _log.Warn("Could not load prices; monetary figures will stay at zero. " + ex.Message);
+                return;
             }
+
+            if (_productValues.Count > 0 || _ingredientCosts.Count > 0)
+            {
+                _log.Info($"Prices loaded: {_productValues.Count} products, {_ingredientCosts.Count} ingredients.");
+
+                // Half a loaf still warrants saying which half is missing.
+                if (_productValues.Count == 0)
+                    _log.Warn("No product prices were found, so every product value will read 0.");
+                if (_ingredientCosts.Count == 0)
+                    _log.Warn("No ingredient costs were found, so profit will equal revenue.");
+                return;
+            }
+
+            if (_attempts < MaxLoadAttempts)
+            {
+                _loaded = false;   // try again on the next batch; the game may not have been ready
+                _log.Info($"No prices available yet (attempt {_attempts} of {MaxLoadAttempts}); will retry.");
+                return;
+            }
+
+            _log.Warn(
+                $"No prices could be read after {MaxLoadAttempts} attempts, so every monetary figure " +
+                "will read 0. Production tracking itself is unaffected. If the game has just been " +
+                "updated, the price members have probably been renamed — see the symbol check above.");
         }
 
         /// <summary>

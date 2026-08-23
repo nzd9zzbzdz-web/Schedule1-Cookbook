@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.IO;
+using System.Text;
 using RecipePlanner.Core.Identity;
 using RecipePlanner.Core.Production;
 using RecipePlanner.Core.Pricing;
 using RecipePlanner.Core.Recipes;
+using RecipePlanner.Core.Reporting;
 using RecipePlanner.Core.Stats;
 using RecipePlanner.Core.Storage;
 using RecipePlanner.Game.Binding;
@@ -263,12 +266,39 @@ namespace RecipePlanner.Mod
                 var stats = StatisticsService.Build(Context.ProfileId, _history.ReadAll(), DateTime.UtcNow);
                 new StatsStore(_layout).Save(stats);
                 _recipes?.Flush();
+                WriteReport(stats);
             }
             catch (Exception ex)
             {
                 // stats.json is a derived cache — losing it costs nothing, so never let it take the
                 // game down on the way out.
                 _log.Warn("Could not write derived stats on shutdown: " + ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Writes the human-readable cookbook next to the JSON.
+        ///
+        /// On the IL2CPP branch this is the only output the player ever sees, so its failure is
+        /// worth a line in the log — but never worth taking the shutdown path down, which is why it
+        /// carries its own catch rather than relying on Flush's.
+        /// </summary>
+        private void WriteReport(PlayerStatistics stats)
+        {
+            try
+            {
+                var report = CookbookReport.Render(
+                    Context.DisplayName,
+                    stats,
+                    _recipes?.All(),
+                    DateTime.UtcNow);
+
+                var path = _layout.ReportFile(Context.ProfileId);
+                File.WriteAllText(path, report, new UTF8Encoding(false));
+            }
+            catch (Exception ex)
+            {
+                _log.Warn("Could not write the readable cookbook: " + ex.Message);
             }
         }
 

@@ -160,6 +160,38 @@ namespace RecipePlanner.Game.Binding
                 Purpose = "Pricing inputs (audit §2.9)",
                 Members = new[] { "BasePrice", "MarketValue", "DrugType" },
                 Optional = true
+            },
+
+            // ================= pricing =================
+            // These were reached by reflection but never verified, which left the mod's headline
+            // safety property with a hole: SymbolGuard could report 13/13 PASSED while every money
+            // figure silently read $0, because GamePriceSource swallows its own failures and logs
+            // the result at Info level.
+            //
+            // All three are Optional on purpose. Prices are a display concern; production tracking
+            // does not need them, and disabling the tracker over a renamed price field would be a
+            // far worse failure than showing no money. Optional means these degrade to a warning
+            // and the operator is told, which is the whole point.
+            new HookDefinition
+            {
+                TypeName = NsProduct + "ProductManager",
+                Purpose = "Product prices — absence means every value reads $0 (release roadmap R5)",
+                Members = new[] { "ProductPrices", "AllProducts" },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = "ScheduleOne.Registry",
+                Purpose = "Ingredient costs — absence means every cost reads $0, so profit == revenue",
+                Members = new[] { "Instance", "ItemDictionary", "ItemRegistry" },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = "ScheduleOne.ItemFramework.StorableItemDefinition",
+                Purpose = "Per-ingredient shop price (audit §2.9)",
+                Members = new[] { "BasePurchasePrice" },
+                Optional = true
             }
         };
 

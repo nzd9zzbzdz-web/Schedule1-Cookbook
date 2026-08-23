@@ -82,7 +82,13 @@ namespace RecipePlanner.Core.Stats
         public Dictionary<string, long> ExcludedByReason { get; set; } = new Dictionary<string, long>(StringComparer.Ordinal);
 
         public Records Records { get; set; } = new Records();
-        public long UniqueRecipesProduced => ByRecipe.Count;
+        /// <summary>
+        /// Null-guarded because this type is deserialized from stats.json, and a file truncated by
+        /// a crash mid-write can leave any of the dictionaries null. stats.json is a derived cache
+        /// that is always rebuildable from the event log, so a damaged one must degrade to zero
+        /// rather than throw — the alternative is an exception on the shutdown path.
+        /// </summary>
+        public long UniqueRecipesProduced => ByRecipe == null ? 0 : ByRecipe.Count;
     }
 
     /// <summary>Pure fold over the event log. No I/O, no game types, fully deterministic.</summary>
