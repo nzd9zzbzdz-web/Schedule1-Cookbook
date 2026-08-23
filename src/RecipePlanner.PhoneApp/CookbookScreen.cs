@@ -1016,10 +1016,14 @@ namespace RecipePlanner.PhoneApp
                 // Built either way so Bind has something to write to unconditionally, and simply
                 // left inactive when switched off — a row that skips creating them would need every
                 // later reference guarded, which is how null-reference bugs get in.
+                // The price takes the whole band when the production figures below it are switched
+                // off, rather than sitting in the top half with empty space under it.
+                var valueBottom = UiFeatures.RowUnitsProduced ? 0.48f : 0f;
+
                 view._value = CreateText(view.Root, "Value", "", font, PriceFontSize, FontStyle.Bold);
                 view._value.color = PriceText;
                 view._value.alignment = TextAnchor.MiddleRight;
-                Anchor(view._value.rectTransform, new Vector2(0.44f, 0.48f), new Vector2(0.62f, 1f),
+                Anchor(view._value.rectTransform, new Vector2(0.44f, valueBottom), new Vector2(0.62f, 1f),
                        Vector2.zero, new Vector2(-6f, -4f));
 
                 view._stats = CreateText(view.Root, "Stats", "", font, StatFontSize - 3, FontStyle.Normal);
@@ -1028,11 +1032,8 @@ namespace RecipePlanner.PhoneApp
                 Anchor(view._stats.rectTransform, new Vector2(0.44f, 0f), new Vector2(0.62f, 0.48f),
                        Vector2.zero, new Vector2(-6f, 0f));
 
-                if (!UiFeatures.RowValueAndUnits)
-                {
-                    view._value.gameObject.SetActive(false);
-                    view._stats.gameObject.SetActive(false);
-                }
+                if (!UiFeatures.RowValue) view._value.gameObject.SetActive(false);
+                if (!UiFeatures.RowUnitsProduced) view._stats.gameObject.SetActive(false);
 
                 view.CreateAddictionMeter(font);
 
@@ -1064,11 +1065,12 @@ namespace RecipePlanner.PhoneApp
             {
                 // Percentage and track share one line rather than stacking. Stacked, the pair read
                 // as two separate things at a glance; side by side they read as one measurement.
-                // Slides left into the space the price and units would have taken when those are
-                // switched off, so the row reads as designed for what it shows rather than as one
-                // with a hole in it.
-                var meterLeft = UiFeatures.RowValueAndUnits ? 0.62f : 0.46f;
-                var trackLeft = UiFeatures.RowValueAndUnits ? 0.74f : 0.58f;
+                // Slides left into the space the figures would have taken when they are switched
+                // off, so the row reads as designed for what it shows rather than as one with a
+                // hole in it. Keyed on the price, since that is the wider of the two columns.
+                var showsFigures = UiFeatures.RowValue || UiFeatures.RowUnitsProduced;
+                var meterLeft = showsFigures ? 0.62f : 0.46f;
+                var trackLeft = showsFigures ? 0.74f : 0.58f;
 
                 _addiction = CreateText(Root, "Addiction", "", font, StatFontSize - 1, FontStyle.Bold);
                 _addiction.alignment = TextAnchor.MiddleRight;
@@ -1625,13 +1627,16 @@ namespace RecipePlanner.PhoneApp
         // narrower reads as one of them.
         private const float GuideButtonWidth = 104f;
 
+        /// <summary>Double width, so the leaf can be large enough to read as a mark.</summary>
+        private const float MixGuideButtonWidth = GuideButtonWidth * 2f;
+
         /// <summary>
-        /// How much of the strain strip the destination buttons take. Narrows to one button when
-        /// the Statistics screen is switched off, so the strip gets the space back rather than
-        /// leaving a gap where a button used to be.
+        /// How much of the strain strip the destination buttons take. Narrows when the Statistics
+        /// screen is switched off, so the strip gets the space back rather than leaving a gap where
+        /// a button used to be.
         /// </summary>
         private static float DestinationsWidth =>
-            UiFeatures.StatisticsScreen ? GuideButtonWidth * 2f + 6f : GuideButtonWidth;
+            MixGuideButtonWidth + (UiFeatures.StatisticsScreen ? GuideButtonWidth + 6f : 0f);
 
         private MixGuideScreen _mixGuide;
         private StatsScreen _stats;
@@ -1649,16 +1654,16 @@ namespace RecipePlanner.PhoneApp
 
             if (UiFeatures.StatisticsScreen)
             {
-                Destination(font, "StatsButton", "STATS", UiSkin.BarChart, -8f, () =>
+                Destination(font, "StatsButton", "STATS", UiSkin.BarChart, -8f, GuideButtonWidth, () =>
                 {
                     if (_stats == null) _stats = StatsScreen.CreateInto(_root, ResolveFont(_root));
                     _stats.Open(_model);
                 });
 
-                guideRight = -GuideButtonWidth - 14f;
+                guideRight = -GuideButtonWidth - 14f;   // left of the Stats button
             }
 
-            Destination(font, "GuideButton", "MIX\nGUIDE", UiSkin.PotLeaf, guideRight, () =>
+            Destination(font, "GuideButton", "MIX GUIDE", UiSkin.PotLeaf, guideRight, MixGuideButtonWidth, () =>
             {
                 if (_mixGuide == null) _mixGuide = MixGuideScreen.CreateInto(_root, ResolveFont(_root));
                 _mixGuide.Open();
@@ -1672,13 +1677,14 @@ namespace RecipePlanner.PhoneApp
         /// changes what the list shows; these two replace it entirely, and a destination should not
         /// look like a toggle.
         /// </summary>
-        private void Destination(Font font, string name, string label, Sprite icon, float right, Action open)
+        private void Destination(
+            Font font, string name, string label, Sprite icon, float right, float width, Action open)
         {
             var button = CreateChild(_root, name);
             button.anchorMin = new Vector2(1f, 1f);
             button.anchorMax = new Vector2(1f, 1f);
             button.pivot = new Vector2(1f, 1f);
-            button.offsetMin = new Vector2(right - GuideButtonWidth, StripBottom);
+            button.offsetMin = new Vector2(right - width, StripBottom);
             button.offsetMax = new Vector2(right, StripTop);
 
             var image = button.gameObject.AddComponent<Image>();
@@ -1693,12 +1699,29 @@ namespace RecipePlanner.PhoneApp
             outlineImage.color = Neon;
             outlineImage.raycastTarget = false;
 
+            // Wide buttons put the mark beside the words; narrow ones stack them. A 28px glyph
+            // centred in a 200px-wide button reads as a mostly-empty box, and a big one stacked
+            // above two lines of text does not fit the strip's height.
+            var wide = width >= GuideButtonWidth * 1.5f;
+
             var glyph = CreateChild(button, "Glyph");
-            glyph.anchorMin = new Vector2(0.5f, 0f);
-            glyph.anchorMax = new Vector2(0.5f, 0f);
-            glyph.pivot = new Vector2(0.5f, 0f);
-            glyph.sizeDelta = new Vector2(28f, 28f);
-            glyph.anchoredPosition = new Vector2(0f, 8f);
+            var glyphSize = wide ? 60f : 28f;
+            glyph.sizeDelta = new Vector2(glyphSize, glyphSize);
+
+            if (wide)
+            {
+                glyph.anchorMin = new Vector2(0f, 0.5f);
+                glyph.anchorMax = new Vector2(0f, 0.5f);
+                glyph.pivot = new Vector2(0f, 0.5f);
+                glyph.anchoredPosition = new Vector2(14f, 0f);
+            }
+            else
+            {
+                glyph.anchorMin = new Vector2(0.5f, 0f);
+                glyph.anchorMax = new Vector2(0.5f, 0f);
+                glyph.pivot = new Vector2(0.5f, 0f);
+                glyph.anchoredPosition = new Vector2(0f, 8f);
+            }
 
             var glyphImage = glyph.gameObject.AddComponent<Image>();
             glyphImage.sprite = icon;
@@ -1706,10 +1729,21 @@ namespace RecipePlanner.PhoneApp
             glyphImage.preserveAspect = true;
             glyphImage.raycastTarget = false;
 
-            var text = CreateText(button, "Label", label, font, ToolFontSize + 2, FontStyle.Bold);
-            text.alignment = TextAnchor.UpperCenter;
+            var text = CreateText(button, "Label", label, font, wide ? ToolFontSize + 6 : ToolFontSize + 2,
+                                  FontStyle.Bold);
             text.color = Neon;
-            Anchor(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(0f, 34f), new Vector2(0f, -6f));
+
+            if (wide)
+            {
+                text.alignment = TextAnchor.MiddleCenter;
+                Anchor(text.rectTransform, Vector2.zero, Vector2.one,
+                       new Vector2(glyphSize + 18f, 0f), new Vector2(-10f, 0f));
+            }
+            else
+            {
+                text.alignment = TextAnchor.UpperCenter;
+                Anchor(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(0f, 34f), new Vector2(0f, -6f));
+            }
 
             var clickable = button.gameObject.AddComponent<Button>();
             clickable.targetGraphic = image;

@@ -27,11 +27,19 @@ namespace RecipePlanner.PhoneApp
         internal static readonly bool StatisticsScreen = false;
 
         /// <summary>
-        /// The price, units and total value on each cookbook row.
+        /// What the product sells for, on each cookbook row.
         ///
-        /// With this off the row is name, chain and addictiveness only, and the meter widens to
-        /// take the space rather than leaving a gap where the numbers were.
+        /// On: it is the number a player is usually scanning the list for, and the Value sort order
+        /// is far more useful when the thing being sorted by is visible.
         /// </summary>
-        internal static readonly bool RowValueAndUnits = false;
+        internal static readonly bool RowValue = true;
+
+        /// <summary>
+        /// How much has been produced, and what it was worth, under the price.
+        ///
+        /// Separate from <see cref="RowValue"/> because they answer different questions: the price
+        /// is about the recipe, this is about the player's history with it. Off for now.
+        /// </summary>
+        internal static readonly bool RowUnitsProduced = false;
     }
 }

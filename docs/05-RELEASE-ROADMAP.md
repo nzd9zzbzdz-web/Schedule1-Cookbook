@@ -838,6 +838,12 @@ Flipping either switch to `true` is the entire change. Deleting them would mean 
 scratch later and would take the reasoning in their comments with it — and the code stays compiled
 and covered by tests, so it cannot rot quietly while out of sight.
 
+Revised after seeing it: the sell price is back on. It is the number a player is usually scanning
+for, and the Value sort order is far more useful when the thing being sorted by is visible. The
+production figures under it — units made and total earned — stay off, so the two are now separate
+switches: they answer different questions, one about the recipe and one about the player's history
+with it.
+
 Two details worth keeping:
 
 - The row's price and units are **built and left inactive** rather than skipped. A row that never
