@@ -404,6 +404,7 @@ differentiator, per the notes above.
 | R7 packaging | 🟡 done; **needs the extract-and-launch check** |
 | R8 page copy | 🟡 written; **needs screenshots** |
 | R9 default-branch value | ✅ readable `cookbook.md` export, 9 tests |
+| R10 unguarded reflection | ⬜ documented, not a blocker |
 
 Everything that could be done without launching the game is done. **Every remaining item needs a
 running game**, which is the one thing this could not do.
@@ -428,6 +429,39 @@ One sitting, in this order:
 5. Bump `MelonInfo` to `1.0.0`, re-run `pwsh tools/package.ps1`, tag the commit, publish.
 
 If step 1 fails, everything else waits — that is still the blocker.
+
+## R10 — The rest of the unguarded reflection ⬜ *(not a release blocker)*
+
+The pricing hole in R5 was not a one-off. It is a *class* of hole, and the class has more members.
+
+`RecipePlanner.Game` reaches the game through 40 distinct reflective member lookups. **18 of them do
+not appear in the hook table**, so `SymbolGuard` cannot see them:
+
+```
+CurrentTime  Definition  GUID  GetAddictiveness  ID  ItemInstance  Key  Mixer  Name
+NetworkObject  Output  PlayerCount  Product  Properties  TimeOfDay  Value  instance  mixRecipes
+```
+
+Some are false positives — `Key` and `Value` are `KeyValuePair`, `instance` is a lower-case fallback
+for the singleton probe, and `Definition` is a wrapper-or-definition guess. But a dozen or so are
+real game members (`CurrentTime`, `TimeOfDay`, `GetAddictiveness`, `PlayerCount`, `mixRecipes`,
+`Output`, `Mixer`, `Properties`) reached with no verification at all. If the game renames one, the
+mod degrades silently in whatever way that member happened to matter — exactly the pricing failure,
+in a different place.
+
+**This is deliberately left undone.** Deciding which of those 18 is a real game member and which is
+a BCL or internal name takes judgement about each one, and encoding a wrong allowlist would be worse
+than having none — a drift guard nobody trusts gets ignored.
+
+**Suggested fix, once triaged:** a test that scans `RecipePlanner.Game` for
+`Reflect.Get*(x, "Member")` string literals and asserts each one is either in `HookTable` or on an
+explicit, commented allowlist. 40 literals is a small enough surface for this to be practical rather
+than noisy, and it makes the next hole impossible to add by accident.
+
+Not a release blocker: nothing here is known broken, and `SymbolGuard` still covers everything the
+tracker depends on to decide whether it is safe to record.
+
+---
 
 ## Explicitly out of scope for v1
 
