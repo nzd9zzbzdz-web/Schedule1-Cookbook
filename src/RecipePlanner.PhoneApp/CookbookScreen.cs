@@ -394,7 +394,6 @@ namespace RecipePlanner.PhoneApp
 
             LayoutHeader($"— {_model.TotalRecipes} recipes ·", _model.ProfileLabel);
             SetStatus(true, "Tracking");
-            RefreshHeaderMark();
 
             RefreshStrip(font);
             Relayout();
@@ -1524,12 +1523,16 @@ namespace RecipePlanner.PhoneApp
             borderImage.color = NeonDim;
             borderImage.raycastTarget = false;
 
+            // The same leaf as the home-screen icon, so the app is recognisable as itself from the
+            // phone's grid through to its header. Borrowing a bud sprite from the save was tried
+            // first and was worse: it changed depending on which strains a character had.
             var icon = CreateChild(tile, "Icon");
             Anchor(icon, Vector2.zero, Vector2.one, new Vector2(6f, 6f), new Vector2(-6f, -6f));
             _headerMark = icon.gameObject.AddComponent<Image>();
+            _headerMark.sprite = UiSkin.PotLeaf;
             _headerMark.preserveAspect = true;
             _headerMark.raycastTarget = false;
-            _headerMark.color = Transparent;
+            _headerMark.color = Neon;
         }
 
         /// <summary>
@@ -1583,29 +1586,6 @@ namespace RecipePlanner.PhoneApp
             _headerProfile.rectTransform.offsetMin = new Vector2(x, _headerProfile.rectTransform.offsetMin.y);
         }
 
-        /// <summary>
-        /// Borrows the first section's bud sprite for the app mark. Read from the model rather than
-        /// named, so a game update that adds a strain still produces an icon — and one that renames
-        /// them does not leave a blank tile.
-        /// </summary>
-        private void RefreshHeaderMark()
-        {
-            if (_headerMark == null || _headerMark.sprite != null) return;
-            if (_model?.Sections == null) return;
-
-            foreach (var section in _model.Sections)
-            {
-                if (section == null || string.IsNullOrEmpty(section.RootProductId)) continue;
-
-                var sprite = IconSource.Product(section.RootProductId);
-                if (sprite == null) continue;
-
-                _headerMark.sprite = sprite;
-                _headerMark.color = Color.white;
-                return;
-            }
-        }
-
         /// <summary>Same measured run-on as the header: the tally starts where the title ends.</summary>
         private void LayoutCaption(string title, string count)
         {
@@ -1625,7 +1605,9 @@ namespace RecipePlanner.PhoneApp
 
         // ---------- mix guide ----------
 
-        private const float GuideButtonWidth = 108f;
+        // Wide enough to read as a destination rather than another toolbar control. It sits beside
+        // the strain tiles, which are 72px squares, so anything much narrower reads as one of them.
+        private const float GuideButtonWidth = 150f;
 
         private MixGuideScreen _mixGuide;
 
@@ -1645,11 +1627,35 @@ namespace RecipePlanner.PhoneApp
 
             var image = button.gameObject.AddComponent<Image>();
             StyleRoundedButton(button, image);
+            image.color = TileFillSelected;
 
-            var label = CreateText(button, "Label", "MIX\nGUIDE", font, ToolFontSize, FontStyle.Bold);
-            label.alignment = TextAnchor.MiddleCenter;
-            label.color = HeaderText;
-            Anchor(label.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            // Outlined in the accent, unlike every other control. It is the only thing on this
+            // screen that leaves it, and a destination should not look like a toggle.
+            var outline = CreateChild(button, "Outline");
+            Anchor(outline, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var outlineImage = outline.gameObject.AddComponent<Image>();
+            outlineImage.sprite = UiSkin.Ring;
+            outlineImage.type = Image.Type.Sliced;
+            outlineImage.color = Neon;
+            outlineImage.raycastTarget = false;
+
+            var leaf = CreateChild(button, "Leaf");
+            leaf.anchorMin = new Vector2(0.5f, 0f);
+            leaf.anchorMax = new Vector2(0.5f, 0f);
+            leaf.pivot = new Vector2(0.5f, 0f);
+            leaf.sizeDelta = new Vector2(30f, 30f);
+            leaf.anchoredPosition = new Vector2(0f, 8f);
+
+            var leafImage = leaf.gameObject.AddComponent<Image>();
+            leafImage.sprite = UiSkin.PotLeaf;
+            leafImage.color = Neon;
+            leafImage.preserveAspect = true;
+            leafImage.raycastTarget = false;
+
+            var label = CreateText(button, "Label", "MIX\nGUIDE", font, ToolFontSize + 3, FontStyle.Bold);
+            label.alignment = TextAnchor.UpperCenter;
+            label.color = Neon;
+            Anchor(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(0f, 36f), new Vector2(0f, -8f));
 
             var clickable = button.gameObject.AddComponent<Button>();
             clickable.targetGraphic = image;

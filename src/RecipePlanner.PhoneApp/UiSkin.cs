@@ -31,11 +31,13 @@ namespace RecipePlanner.PhoneApp
         private const float RingThickness = 1.6f;
 
         private const int PillSize = 64;
+        private const int LeafSize = 96;
 
         private static Sprite _body;
         private static Sprite _glow;
         private static Sprite _ring;
         private static Sprite _pill;
+        private static Sprite _leaf;
 
         /// <summary>A rounded rectangle, 9-sliced so it never distorts however it is stretched.</summary>
         public static Sprite Body => _body ?? (_body = BuildBody());
@@ -60,6 +62,64 @@ namespace RecipePlanner.PhoneApp
         public static Sprite Pill => _pill ?? (_pill = BuildPill());
 
         /// <summary>
+        /// A cannabis leaf silhouette, white so it can be tinted wherever it is used.
+        ///
+        /// Not 9-sliced: a shape with meaning cannot be stretched, only scaled, so it is drawn once
+        /// at a size large enough for the biggest place it appears.
+        /// </summary>
+        public static Sprite PotLeaf => _leaf ?? (_leaf = BuildLeaf());
+
+        /// <summary>
+        /// How far inside the leaf a point is, 0 outside and rising to 1 at a leaflet's spine.
+        ///
+        /// Shared with <see cref="AppIconFactory"/> so the home-screen icon and the in-app mark are
+        /// literally the same shape — two hand-tuned leaves that nearly match would read as a
+        /// mistake rather than as a family.
+        ///
+        /// Each leaflet is a capsule from the origin to its tip whose width tapers to nothing at the
+        /// end, which is what gives the pointed lobes. The result is the union, so overlapping
+        /// leaflets merge instead of showing a seam.
+        /// </summary>
+        internal static float LeafCoverage(float px, float py)
+        {
+            var best = 0f;
+
+            for (var i = 0; i < LeafletAngles.Length; i++)
+            {
+                var radians = LeafletAngles[i] * Mathf.Deg2Rad;
+                var tipX = Mathf.Cos(radians) * LeafletLengths[i];
+                var tipY = Mathf.Sin(radians) * LeafletLengths[i];
+
+                var lengthSquared = tipX * tipX + tipY * tipY;
+                if (lengthSquared <= 0f) continue;
+
+                var t = Mathf.Clamp01((px * tipX + py * tipY) / lengthSquared);
+
+                var dx = px - tipX * t;
+                var dy = py - tipY * t;
+                var distance = Mathf.Sqrt(dx * dx + dy * dy);
+
+                // Widest a third of the way along and tapering to a point, so the leaflets meet in
+                // a stalk rather than a blob.
+                var width = LeafletWidths[i] * Mathf.Sin(Mathf.Clamp01(t * 1.15f) * Mathf.PI * 0.85f + 0.12f);
+                if (width <= 0f) continue;
+
+                var coverage = 1f - distance / width;
+                if (coverage > best) best = coverage;
+            }
+
+            if (py < 0f && py > -0.16f && Mathf.Abs(px) < 0.016f)
+                best = Mathf.Max(best, 1f - Mathf.Abs(px) / 0.016f);
+
+            return best;
+        }
+
+        /// <summary>Seven leaflets, the count a cannabis leaf is normally drawn with.</summary>
+        private static readonly float[] LeafletAngles = { 90f, 55f, 125f, 25f, 155f, 0f, 180f };
+        private static readonly float[] LeafletLengths = { 0.46f, 0.42f, 0.42f, 0.34f, 0.34f, 0.24f, 0.24f };
+        private static readonly float[] LeafletWidths = { 0.085f, 0.078f, 0.078f, 0.066f, 0.066f, 0.052f, 0.052f };
+
+        /// <summary>
         /// Dropped when the app is torn down. Sprites and textures are unmanaged Unity objects; if
         /// a save unload destroys the UI while these still point at freed textures, the next save
         /// would draw garbage or throw.
@@ -70,6 +130,7 @@ namespace RecipePlanner.PhoneApp
             Destroy(ref _glow);
             Destroy(ref _ring);
             Destroy(ref _pill);
+            Destroy(ref _leaf);
         }
 
         private static void Destroy(ref Sprite sprite)
@@ -151,6 +212,38 @@ namespace RecipePlanner.PhoneApp
             }
 
             return ToSprite(pixels, RingSize, RingRadius);
+        }
+
+        private static Sprite BuildLeaf()
+        {
+            var pixels = new Color[LeafSize * LeafSize];
+
+            for (var y = 0; y < LeafSize; y++)
+            for (var x = 0; x < LeafSize; x++)
+            {
+                // The origin sits below centre so the fan has room to spread upward without
+                // clipping, and the stem has somewhere to go.
+                var px = (x + 0.5f) / LeafSize - 0.5f;
+                var py = (y + 0.5f) / LeafSize - 0.30f;
+
+                // Scaled up so the coverage edge spans about a pixel at this resolution, which is
+                // what anti-aliases it.
+                var a = Mathf.Clamp01(LeafCoverage(px, py) * LeafSize * 0.05f);
+                pixels[y * LeafSize + x] = new Color(1f, 1f, 1f, a);
+            }
+
+            var texture = new Texture2D(LeafSize, LeafSize, TextureFormat.ARGB32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.HideAndDontSave,
+            };
+            texture.SetPixels(pixels);
+            texture.Apply(false, false);
+
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, LeafSize, LeafSize), new Vector2(0.5f, 0.5f));
+            sprite.hideFlags = HideFlags.HideAndDontSave;
+            return sprite;
         }
 
         private static Sprite BuildPill()

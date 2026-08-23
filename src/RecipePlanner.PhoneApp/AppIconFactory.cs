@@ -6,8 +6,9 @@ namespace RecipePlanner.PhoneApp
     /// Generates the Cookbook's home-screen icon at runtime.
     ///
     /// A mod ships no art, and reusing the template app's sprite would put two identical icons on
-    /// the phone. Drawing a rounded tile in a colour none of the built-in apps use makes it
-    /// findable at a glance, which is what a home-screen icon is for.
+    /// the phone. The leaf is drawn rather than approximated with bars because a home-screen icon
+    /// is read at a glance and at a small size: a recognisable silhouette identifies the app before
+    /// the label does, where an abstract mark makes the player read every icon in turn.
     /// </summary>
     public static class AppIconFactory
     {
@@ -16,9 +17,9 @@ namespace RecipePlanner.PhoneApp
 
         private static Sprite _cookbook;
 
-        /// <summary>Warm amber — distinct from the green, orange, red, blue, navy and purple in use.</summary>
-        private static readonly Color Fill = new Color(0.85f, 0.62f, 0.16f, 1f);
-        private static readonly Color Mark = new Color(1f, 0.97f, 0.90f, 1f);
+        private static readonly Color Fill = new Color(0.055f, 0.13f, 0.075f, 1f);
+        private static readonly Color Leaf = new Color(0.24f, 0.92f, 0.44f, 1f);
+        private static readonly Color LeafDeep = new Color(0.13f, 0.62f, 0.28f, 1f);
 
         public static Sprite Cookbook()
         {
@@ -45,17 +46,24 @@ namespace RecipePlanner.PhoneApp
             return _cookbook;
         }
 
-        /// <summary>Three horizontal bars, suggesting a page of entries.</summary>
         private static Color32 Paint(int x, int y)
         {
-            const int left = 34, right = 94;
-            var isBar = (Between(y, 42, 52) || Between(y, 60, 70) || Between(y, 78, 88))
-                        && x >= left && x <= right;
+            // Normalised around the leaf's origin, which sits below centre so the fan has room to
+            // spread upward without clipping the tile.
+            var px = (x + 0.5f) / Size - 0.5f;
+            var py = (y + 0.5f) / Size - 0.30f;
 
-            return isBar ? (Color32)Mark : (Color32)Fill;
+            var coverage = UiSkin.LeafCoverage(px, py);
+            if (coverage <= 0f) return Fill;
+
+            // Deeper green toward the middle of each leaflet, brighter at the edges, which suggests
+            // the veining a flat silhouette loses at this size.
+            var shade = Color.Lerp(Leaf, LeafDeep, Mathf.Clamp01(coverage * 0.55f));
+            return Color.Lerp(Fill, shade, Mathf.Clamp01(coverage * 6f));
         }
 
-        private static bool Between(int v, int lo, int hi) => v >= lo && v <= hi;
+        // The leaf itself lives in UiSkin, so the home-screen icon and the in-app mark are the
+        // same shape rather than two hand-tuned drawings that nearly agree.
 
         /// <summary>Squared distance keeps this integer-only; no per-pixel sqrt.</summary>
         private static bool InsideRoundedRect(int x, int y)
