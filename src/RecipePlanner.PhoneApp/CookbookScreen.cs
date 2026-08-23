@@ -1326,11 +1326,11 @@ namespace RecipePlanner.PhoneApp
         private readonly List<Text> _effectChips = new List<Text>();
         private string _pinnedProductId;
 
-        private const float CardWidth = 250f;
-        private const float CardPad = 10f;
-        private const float ChipHeight = 26f;
-        private const float ChipGap = 4f;
-        private const float CardTitleHeight = 26f;
+        private const float CardWidth = 340f;
+        private const float CardPad = 14f;
+        private const float ChipHeight = 36f;
+        private const float ChipGap = 6f;
+        private const float CardTitleHeight = 34f;
 
         /// <summary>
         /// A floating card listing every effect a recipe carries.
@@ -1351,22 +1351,28 @@ namespace RecipePlanner.PhoneApp
             _effectsCard.pivot = new Vector2(0f, 1f);
             _effectsCard.sizeDelta = new Vector2(CardWidth, 100f);
 
+            // The card itself carries NO image. uGUI draws a parent's own graphic first and then
+            // every child over it, so putting the glow on a child of a card that had its own
+            // backdrop painted the glow straight over the top and washed the whole thing out.
+            // Glow and body are siblings instead, in that order.
             var glowRect = CreateChild(_effectsCard, "Glow");
-            Anchor(glowRect, Vector2.zero, Vector2.one, new Vector2(-8f, -8f), new Vector2(8f, 8f));
+            Anchor(glowRect, Vector2.zero, Vector2.one, new Vector2(-10f, -10f), new Vector2(10f, 10f));
             var glow = glowRect.gameObject.AddComponent<Image>();
             glow.sprite = UiSkin.Glow;
             glow.type = Image.Type.Sliced;
             glow.raycastTarget = false;
             glow.color = CardGlow;
 
-            _effectsBackdrop = _effectsCard.gameObject.AddComponent<Image>();
+            var bodyRect = CreateChild(_effectsCard, "Body");
+            Anchor(bodyRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            _effectsBackdrop = bodyRect.gameObject.AddComponent<Image>();
             _effectsBackdrop.sprite = UiSkin.Body;
             _effectsBackdrop.type = Image.Type.Sliced;
             _effectsBackdrop.color = CardBackdrop;
             _effectsBackdrop.raycastTarget = false;
 
-            _effectsTitle = CreateText(_effectsCard, "Title", "", font, StatFontSize, FontStyle.Bold);
-            _effectsTitle.color = HeaderText;
+            _effectsTitle = CreateText(_effectsCard, "Title", "", font, NameFontSize, FontStyle.Bold);
+            _effectsTitle.color = CardTitleText;
             _effectsTitle.alignment = TextAnchor.MiddleLeft;
             _effectsTitle.raycastTarget = false;
             Anchor(_effectsTitle.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f),
@@ -1395,7 +1401,7 @@ namespace RecipePlanner.PhoneApp
                 background.color = ChipBackdrop;
                 background.raycastTarget = false;
 
-                var label = CreateText(chipRect, "Label", "", font, StatFontSize - 2, FontStyle.Bold);
+                var label = CreateText(chipRect, "Label", "", font, NameFontSize - 2, FontStyle.Bold);
                 label.alignment = TextAnchor.MiddleLeft;
                 label.raycastTarget = false;
                 Anchor(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(10f, 0f), new Vector2(-8f, 0f));
@@ -1490,7 +1496,7 @@ namespace RecipePlanner.PhoneApp
                 var hash = 17;
                 foreach (var c in effect) hash = hash * 31 + char.ToLowerInvariant(c);
                 var hue = Mathf.Abs(hash % 360) / 360f;
-                return Color.HSVToRGB(hue, 0.45f, 1f);
+                return Color.HSVToRGB(hue, 0.52f, 1f);
             }
         }
 
@@ -1536,16 +1542,20 @@ namespace RecipePlanner.PhoneApp
         private static ColorBlock ButtonColours => new ColorBlock
         {
             normalColor = Color.white,
-            highlightedColor = new Color(1.55f, 1.55f, 1.65f, 1f),
-            pressedColor = new Color(0.75f, 0.78f, 0.85f, 1f),
+            highlightedColor = new Color(1.35f, 1.45f, 1.38f, 1f),
+            pressedColor = new Color(0.72f, 0.82f, 0.75f, 1f),
             selectedColor = Color.white,
             disabledColor = new Color(1f, 1f, 1f, 0.35f),
             colorMultiplier = 1f,
             fadeDuration = 0.09f,
         };
 
-        private static readonly Color GlowRest = new Color(0.55f, 0.72f, 1f, 0.10f);
-        private static readonly Color GlowHot = new Color(0.62f, 0.80f, 1f, 0.42f);
+        // Green, to match the effects card, and dialled well back from the first pass. At rest the
+        // glow should read as a soft edge rather than a light source; only hover should announce
+        // itself. A row of permanently glowing buttons is noise, and noise everywhere is the same
+        // as nowhere — nothing stands out when the pointer actually lands.
+        private static readonly Color GlowRest = new Color(0.35f, 0.85f, 0.45f, 0.07f);
+        private static readonly Color GlowHot = new Color(0.42f, 1f, 0.55f, 0.26f);
 
         private static readonly Color Transparent = new Color(0f, 0f, 0f, 0f);
         private static readonly Color ButtonIdle = new Color(1f, 1f, 1f, 0.10f);
@@ -1567,9 +1577,12 @@ namespace RecipePlanner.PhoneApp
         private static readonly Color RowStripe = new Color(1f, 1f, 1f, 0.045f);
         private static readonly Color Favourite = new Color(1f, 0.80f, 0.30f, 1f);
 
-        private static readonly Color CardBackdrop = new Color(0.09f, 0.10f, 0.13f, 0.97f);
-        private static readonly Color CardGlow = new Color(0.55f, 0.72f, 1f, 0.30f);
-        private static readonly Color ChipBackdrop = new Color(1f, 1f, 1f, 0.07f);
+        // Green, and much softer than the first attempt: the card sits over the list, so a strong
+        // halo bleeds into the rows behind it and makes both harder to read.
+        private static readonly Color CardBackdrop = new Color(0.055f, 0.105f, 0.075f, 0.985f);
+        private static readonly Color CardGlow = new Color(0.30f, 0.95f, 0.45f, 0.13f);
+        private static readonly Color ChipBackdrop = new Color(0.35f, 0.95f, 0.50f, 0.10f);
+        private static readonly Color CardTitleText = new Color(0.62f, 0.96f, 0.68f, 1f);
 
         /// <summary>
         /// The cookbook keys recipes by base + additive chain, so an entry whose origin is unknown
