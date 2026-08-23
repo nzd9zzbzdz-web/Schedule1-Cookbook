@@ -127,11 +127,55 @@ namespace RecipePlanner.Game.Binding
 
         // ---- ingredients ----
 
+        /// <summary>
+        /// Mixable ingredients, from <c>ValidMixIngredients</c> where the game has filled it in and
+        /// from the item registry where it has not.
+        ///
+        /// The fallback is not defensive padding — the list was observed EMPTY at runtime on a save
+        /// with a full cookbook, which is the same behaviour the audit records for
+        /// <c>mixRecipes</c>: the game appears to populate these as things are learned rather than
+        /// on load. Without the fallback the guide reports "0 ingredients" and every transformation
+        /// silently disappears with them.
+        /// </summary>
+        private IEnumerable<string> MixableIngredientIds(object manager, object registry)
+        {
+            var declared = new List<string>(ReadIds(Reflect.Get(manager, "ValidMixIngredients")));
+            if (declared.Count > 0) return declared;
+
+            // Anything carrying an effect is a candidate; products carry effects too, so they are
+            // subtracted rather than guessed at by name.
+            var products = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var product in Reflect.Enumerate(Reflect.Get(manager, "AllProducts")))
+            {
+                var productId = Reflect.GetString(product, "ID");
+                if (!string.IsNullOrEmpty(productId)) products.Add(productId);
+            }
+
+            var found = new List<string>();
+            foreach (var pair in Reflect.Enumerate(Reflect.Get(registry, "ItemDictionary")))
+            {
+                var id = Reflect.AsString(Reflect.Get(pair, "Key"));
+                if (string.IsNullOrEmpty(id) || products.Contains(id)) continue;
+
+                var definition = Reflect.Get(pair, "Value");
+                if (definition == null) continue;
+
+                var carriesAnEffect = false;
+                foreach (var property in Reflect.Enumerate(Reflect.Get(definition, "Properties")))
+                    if (property != null) { carriesAnEffect = true; break; }
+
+                if (carriesAnEffect) found.Add(id);
+            }
+
+            _log.Info($"ValidMixIngredients was empty; found {found.Count} mixable item(s) in the registry.");
+            return found;
+        }
+
         private void ReadIngredients(object manager, MixGuide guide, Dictionary<string, EffectInfo> effects)
         {
             var registry = Singleton(_registryType);
 
-            foreach (var id in ReadIds(Reflect.Get(manager, "ValidMixIngredients")))
+            foreach (var id in MixableIngredientIds(manager, registry))
             {
                 var definition = FindItem(registry, id);
                 if (definition == null) continue;

@@ -62,9 +62,17 @@ namespace RecipePlanner.PhoneApp
             var root = New(parent, "MixGuide");
             Fill(root);
 
-            var backdrop = root.gameObject.AddComponent<Image>();
+            // The backdrop is its own child rather than an Image on the root, and it is fully
+            // opaque. This is a full-screen takeover: any translucency at all lets the cookbook's
+            // rows read straight through the guide's panels, which is unreadable rather than
+            // stylish. It also swallows clicks meant for the list underneath.
+            var backdropRect = New(root, "Backdrop");
+            Fill(backdropRect);
+            backdropRect.SetAsFirstSibling();
+
+            var backdrop = backdropRect.gameObject.AddComponent<Image>();
             backdrop.color = Backdrop;
-            backdrop.raycastTarget = true;   // swallow clicks meant for the cookbook underneath
+            backdrop.raycastTarget = true;
 
             var screen = new MixGuideScreen(root, font);
             screen.Build();
@@ -533,12 +541,14 @@ namespace RecipePlanner.PhoneApp
 
         // ---- palette, matching the cookbook's green ----
 
-        private static readonly Color Backdrop = new Color(0.045f, 0.06f, 0.05f, 0.985f);
-        private static readonly Color HeaderFill = new Color(0.08f, 0.15f, 0.10f, 1f);
-        private static readonly Color PanelFill = new Color(1f, 1f, 1f, 0.04f);
-        private static readonly Color ButtonFill = new Color(1f, 1f, 1f, 0.10f);
-        private static readonly Color RowIdle = new Color(1f, 1f, 1f, 0.05f);
-        private static readonly Color RowSelected = new Color(0.35f, 0.95f, 0.50f, 0.20f);
+        // Fully opaque throughout. The guide covers the cookbook completely, so anything
+        // translucent lets the list read through it — legible as a design idea, illegible in fact.
+        private static readonly Color Backdrop = new Color(0.035f, 0.055f, 0.042f, 1f);
+        private static readonly Color HeaderFill = new Color(0.07f, 0.15f, 0.10f, 1f);
+        private static readonly Color PanelFill = new Color(0.065f, 0.088f, 0.072f, 1f);
+        private static readonly Color ButtonFill = new Color(0.13f, 0.19f, 0.15f, 1f);
+        private static readonly Color RowIdle = new Color(0.10f, 0.135f, 0.113f, 1f);
+        private static readonly Color RowSelected = new Color(0.16f, 0.34f, 0.22f, 1f);
 
         private static readonly Color Accent = new Color(0.62f, 0.96f, 0.68f, 1f);
         private static readonly Color Primary = new Color(0.93f, 0.95f, 0.93f, 1f);
