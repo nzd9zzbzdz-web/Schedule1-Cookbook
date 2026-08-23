@@ -137,9 +137,16 @@ namespace RecipePlanner.Game.Binding
         /// on load. Without the fallback the guide reports "0 ingredients" and every transformation
         /// silently disappears with them.
         /// </summary>
-        private IEnumerable<string> MixableIngredientIds(object manager, object registry)
+        private IEnumerable<object> MixableDefinitions(object manager, object registry)
         {
-            var declared = new List<string>(ReadIds(Reflect.Get(manager, "ValidMixIngredients")));
+            // The definitions themselves, not their ids. Looking each id back up through
+            // Registry.GetItem was a needless round trip AND a broken one: the game declares two
+            // GetItem(String) overloads, one of them generic, so binding by signature is ambiguous
+            // and threw for every single ingredient. The list already holds what is needed.
+            var declared = new List<object>();
+            foreach (var entry in Reflect.Enumerate(Reflect.Get(manager, "ValidMixIngredients")))
+                if (entry != null) declared.Add(entry);
+
             if (declared.Count > 0) return declared;
 
             // Anything carrying an effect is a candidate; products carry effects too, so they are
@@ -151,7 +158,7 @@ namespace RecipePlanner.Game.Binding
                 if (!string.IsNullOrEmpty(productId)) products.Add(productId);
             }
 
-            var found = new List<string>();
+            var found = new List<object>();
             foreach (var pair in Reflect.Enumerate(Reflect.Get(registry, "ItemDictionary")))
             {
                 var id = Reflect.AsString(Reflect.Get(pair, "Key"));
@@ -164,7 +171,7 @@ namespace RecipePlanner.Game.Binding
                 foreach (var property in Reflect.Enumerate(Reflect.Get(definition, "Properties")))
                     if (property != null) { carriesAnEffect = true; break; }
 
-                if (carriesAnEffect) found.Add(id);
+                if (carriesAnEffect) found.Add(definition);
             }
 
             _log.Info($"ValidMixIngredients was empty; found {found.Count} mixable item(s) in the registry.");
@@ -175,10 +182,10 @@ namespace RecipePlanner.Game.Binding
         {
             var registry = Singleton(_registryType);
 
-            foreach (var id in MixableIngredientIds(manager, registry))
+            foreach (var definition in MixableDefinitions(manager, registry))
             {
-                var definition = FindItem(registry, id);
-                if (definition == null) continue;
+                var id = Reflect.GetString(definition, "ID");
+                if (string.IsNullOrEmpty(id)) continue;
 
                 var info = new IngredientInfo
                 {
@@ -310,45 +317,6 @@ namespace RecipePlanner.Game.Binding
             return info;
         }
 
-        private static IEnumerable<string> ReadIds(object collection)
-        {
-            foreach (var entry in Reflect.Enumerate(collection))
-            {
-                if (entry == null) continue;
-                var id = Reflect.GetString(entry, "ID") ?? Reflect.AsString(entry);
-                if (!string.IsNullOrEmpty(id)) yield return id;
-            }
-        }
-
-        /// <summary>
-        /// Registry.GetItem is static and takes the id, which is the game's own lookup — walking
-        /// ItemDictionary by hand would work too but would depend on its shape as well as its name.
-        /// </summary>
-        private object FindItem(object registry, string id)
-        {
-            if (_registryType == null || string.IsNullOrEmpty(id)) return null;
-
-            try
-            {
-                var method = _registryType.GetMethod(
-                    "GetItem",
-                    BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy,
-                    null, new[] { typeof(string) }, null);
-
-                if (method != null) return method.Invoke(null, new object[] { id });
-            }
-            catch { /* fall through to the dictionary */ }
-
-            if (registry == null) return null;
-
-            foreach (var pair in Reflect.Enumerate(Reflect.Get(registry, "ItemDictionary")))
-            {
-                var key = Reflect.AsString(Reflect.Get(pair, "Key"));
-                if (string.Equals(key, id, StringComparison.OrdinalIgnoreCase)) return Reflect.Get(pair, "Value");
-            }
-
-            return null;
-        }
 
         private static float ReadFloat(object instance, string member, float fallback = 0f)
         {

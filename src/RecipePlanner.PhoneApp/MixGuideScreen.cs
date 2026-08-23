@@ -268,10 +268,14 @@ namespace RecipePlanner.PhoneApp
         {
             var row = RowAt(index);
             row.Rect.gameObject.SetActive(true);
-            row.Rect.anchoredPosition = new Vector2(0f, y);
-            row.Rect.offsetMin = new Vector2(4f, 0f);
-            row.Rect.offsetMax = new Vector2(-4f, 0f);
+
+            // Height first, then position. The horizontal insets are set once at construction and
+            // must NOT be reapplied here: with anchorMin.y == anchorMax.y, offsetMin.y and
+            // offsetMax.y ARE the vertical position and height, so assigning them zeroed both and
+            // stacked every row on top of the first. The list looked like it held one item when it
+            // held thirty-five.
             row.Rect.sizeDelta = new Vector2(row.Rect.sizeDelta.x, RowHeight);
+            row.Rect.anchoredPosition = new Vector2(0f, y);
 
             row.Left.text = left;
             row.Right.text = right;
@@ -295,6 +299,11 @@ namespace RecipePlanner.PhoneApp
                 rect.anchorMin = new Vector2(0f, 1f);
                 rect.anchorMax = new Vector2(1f, 1f);
                 rect.pivot = new Vector2(0.5f, 1f);
+
+                // Horizontal insets, set once. Stretched across the width, so these are the only
+                // offsets that mean what they look like — the vertical pair is position and height.
+                rect.offsetMin = new Vector2(4f, rect.offsetMin.y);
+                rect.offsetMax = new Vector2(-4f, rect.offsetMax.y);
 
                 var image = rect.gameObject.AddComponent<Image>();
                 image.sprite = UiSkin.Body;
