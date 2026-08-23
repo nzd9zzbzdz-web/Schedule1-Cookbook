@@ -73,3 +73,89 @@ Worth deciding in advance, so sunk cost does not answer it later:
   outcome than not supporting the branch.
 - If real users switch branches without complaint after 1.0, the barrier was smaller than it looks
   and the effort belongs elsewhere.
+
+---
+
+## Measured, 2026-08-23 — the port is far smaller than this plan assumed
+
+Everything above was written from reading. Then two things were actually run, both against the
+`MelonLoader/Il2CppAssemblies` proxies already on disk from an earlier stint on the default branch.
+Neither needed a branch switch, which is worth remembering before spending 7 GB to answer a
+question: **the proxies outlive the branch, and they are enough to check almost everything.**
+
+### Step 3 is done, and it passed
+
+```
+HookVerifier … \MelonLoader\Il2CppAssemblies
+Symbol check PASSED (30/30 hooks resolved)
+RESULT: hook table matches this build — safe to track.
+```
+
+**Every hook resolves on IL2CPP.** Production detection, attribution, pricing, the mix guide, the
+clock — the entire tracking half of the mod, verified against the default branch's own metadata.
+This was the single largest unknown and it is now closed.
+
+What this does *not* prove is that the hooks behave the same once running. Metadata says the
+symbols exist and have the right shapes; only a live run says the patches fire. That is step 4 and
+it still needs the branch.
+
+### The UI is 12 errors away, not a rewrite
+
+`tools/Il2CppProbe` compiles the real phone-app sources against the proxies. Baseline:
+
+| | |
+|---|---|
+| Total distinct errors | **12** |
+| Files affected | **5 of 10** |
+| Lines compiling unchanged | **~3,700 of 4,784 (77%)** |
+
+`CookbookScreen.cs` — 2,291 lines, the entire cookbook — compiles **clean**. So do `MixGuideScreen`,
+`StatsScreen`, `AppIconFactory` and `UiFeatures`. All the drawing, layout, sprite generation and
+interaction logic is already branch-agnostic, which is the payoff for having kept Unity-only code
+free of game types.
+
+The 12 errors are three problems, not twelve:
+
+1. **Namespace rename — 8 errors, `ScheduleOne.*` is `Il2CppScheduleOne.*`.** Mechanical. Affects
+   `IconSource`, `CookbookAppInstaller`, `CookbookApp`.
+
+2. **Unity's UI event interfaces are emitted as *classes* — 4 errors.** Il2CppInterop renders
+   `IPointerEnterHandler`, `IScrollHandler` and friends as classes, so `: MonoBehaviour,
+   IPointerEnterHandler` becomes "multiple base classes". Hits `HoverGlow` (hover glow) and
+   `SmoothScroll`. Real work, but confined to two small behaviours, and both degrade gracefully:
+   worst case the app ships on IL2CPP without hover glow and with default scrolling.
+
+3. **`App<>` cannot be found — 1 error, `CookbookApp.cs:25`.** The known blocker, and the whole
+   reason for the clone-and-patch approach above.
+
+### The approach is confirmed against real metadata
+
+- `Il2CppScheduleOne.UI.Phone.ProductManagerApp.ProductManagerApp` is a real proxy type. Nothing to
+  inject.
+- It declares `virtual Awake()`, `virtual Start()`, `virtual SetOpen(Boolean)` and `LateUpdate()` —
+  every patch target this plan named, all present and all virtual.
+- Its base really is `Il2CppScheduleOne.UI.App\`1[[ProductManagerApp]]`, so the blocker is exactly
+  where it was expected.
+- `App\`1` exposes `appContainer`, `_screen`, the static `Apps` list, `SetOpen`, `Update` and
+  `GenerateHomeScreenIcon` — the surface the screen needs.
+- `PlayerSingleton\`1` declares `virtual Awake()`, which is where `Instance` is assigned. **The
+  singleton-theft risk named above is confirmed real, not hypothetical.**
+
+One thing the probe could not settle: the tool renders `App\`1`'s own base as empty, so whether
+`App<T>` derives from `PlayerSingleton<T>` on this branch is still unconfirmed. It decides whether
+the singleton risk applies to our clone at all, and it is the first thing to check on a live run.
+
+### Revised order of work
+
+Steps 1–3 are done. The remaining sequence, with the cheap parts first:
+
+| # | Step | Needs the branch? |
+|---|---|---|
+| 4 | Fix the 8 namespace errors | No — the probe verifies |
+| 5 | Rework `HoverGlow` and `SmoothScroll` for interop | No — the probe verifies |
+| 6 | Clone, keep `ProductManagerApp`, patch `SetOpen` instance-filtered | Yes |
+| 7 | Confirm tracking actually fires live | Yes |
+
+Steps 4 and 5 take the probe from 12 errors to 1 without ever leaving the Mono branch, and that
+remaining 1 is the blocker the clone approach is designed to route around. The branch switch is
+only needed once there is something to run.

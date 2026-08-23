@@ -8,3 +8,7 @@ dist/
 
 # Release archives: attached to the Nexus release, not tracked
 release/
+
+# Il2CppProbe is a measuring instrument; its output is never shipped.
+tools/Il2CppProbe/bin/
+tools/Il2CppProbe/obj/
