@@ -30,14 +30,78 @@ contradict each other — and a contradiction is what gets argued about later:
 | Users can modify for their own personal use | **No** |
 | Users can use this in a modpack / collection | **No** — ask first |
 
-Nexus also has a free-text permissions box. Something like:
+### The "ask me first" note
 
-> Please do not re-upload this mod anywhere, include it in modpacks, or reuse its code. The source
-> is public so you can see what it does, not so it can be reused. If you want to do something with
-> it, just ask me first — I'm not unreasonable, I'd just like to be asked.
+Nexus has a free-text permissions box. Every checkbox above stays **No** — this is the human
+explanation of *why*, and it is what people will actually read. Pure refusal reads as hostile;
+refusal plus an open door reads as reasonable, and costs you no rights whatever.
 
-Worth adding an **"Ask permission"** note rather than pure refusal. It costs nothing, reads far
-better to the community, and you keep every legal right either way.
+Pick one.
+
+**Short — for the permissions box:**
+
+> All rights reserved, but I'd rather talk than lawyer.
+>
+> Please don't re-upload this mod, mirror it, put it in a collection or modpack, or reuse its code.
+> The source is public so you can see exactly what it does to your machine and your saves — that's
+> transparency, not a licence to reuse it.
+>
+> If you want to do any of that, just ask me first. I'm not precious about it, I'd just like to know
+> where my work is going and be able to fix it if it breaks. I say yes more often than no.
+
+**Longer — if you want it on the page itself as well:**
+
+> **Permissions — the short version: ask me.**
+>
+> This mod is all rights reserved. Practically, that means: use it, enjoy it, tell people about it.
+> Don't re-upload it anywhere, don't mirror it, don't bundle it into a collection or modpack, don't
+> translate or port it, and don't reuse its code in your own project — not without asking me first.
+>
+> The source code is on GitHub. That's there so you can check what a mod that hooks your game and
+> writes files is actually doing, before you trust it. Being able to read it isn't the same as being
+> licensed to reuse it.
+>
+> None of this is me being territorial. It's that a mod like this breaks every time the game updates
+> — that's why it verifies its own hooks before it records anything — and a stale copy floating
+> around on another site, silently recording wrong numbers with my name on it, is bad for whoever
+> downloaded it and bad for me.
+>
+> So: ask. I'm genuinely easy to deal with, and the answer is usually yes.
+
+**Optional line — recommended, but entirely your call:**
+
+> If I ever go quiet and stop updating this, ask me and I'll almost certainly hand it over rather
+> than let it rot.
+
+That one sentence defuses the single most common objection to a restrictive licence ("what happens
+when you abandon it?"), and commits you to nothing — you are still the one being asked.
+
+### Replies you will need later
+
+Requests will come. Having these ready keeps your tone consistent when you are answering on a phone
+at midnight. Adjust to taste.
+
+**Translation request** — say yes:
+
+> Yes, please do. Two conditions: link back to this page rather than re-hosting the DLLs, and let
+> me know when it's up so I can link it from here.
+
+**Modpack / collection request** — this is the one worth thinking about:
+
+> Thanks for asking. I'd rather it wasn't bundled — this mod breaks whenever the game updates, and a
+> collection pinning an old copy means people get silently wrong statistics and come to me about it.
+> Link to the mod page instead and I'm happy.
+
+**Someone re-uploaded it** — firm, not aggressive, and always first contact rather than a report:
+
+> Hi — I'm the author of Schedule I Cookbook. It's all rights reserved and I didn't give permission
+> for this upload. Please take it down. If you had a reason for mirroring it, tell me and we can
+> sort something out, but I'd like it removed either way.
+
+**"Why not open source it?"**:
+
+> The source is public — it's on GitHub, so you can read exactly what it does. I just haven't
+> licensed it for reuse. Happy to talk if there's something specific you want to do with it.
 
 ---
 
