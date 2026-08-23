@@ -415,7 +415,7 @@ differentiator, per the notes above.
 | Step | State |
 |---|---|
 | R0 repo | ✅ done |
-| R1 IL2CPP blocker | 🟡 **Mono half confirmed live**; IL2CPP half still untested |
+| R1 IL2CPP blocker | 🟡 **Mono half fully confirmed** (incl. multi-save reinstall); IL2CPP half untested |
 | R2 scope / naming | ✅ done |
 | R3 documentation | ✅ done |
 | R4 install guide | ✅ written; **needs one clean-install walkthrough** |
@@ -485,6 +485,9 @@ destroyed with the previous save and would happily rebuild. It just never got as
 Pre-existing, not introduced by the R1 refactor — but preserved by it.
 
 **Fix.** Clear the latch whenever no save is loaded, so the next load reinstalls.
+
+**Confirmed live** — two consecutive saves in one session, two `Cookbook app installed on the phone.`
+lines, no errors.
 
 `PhoneAppLoader` was hardened at the same time: a single install exception used to disable the UI
 permanently for the session, which matters far more now that installs happen once per save load. It

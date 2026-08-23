@@ -539,7 +539,16 @@ namespace RecipePlanner.PhoneApp
         // confident reasoning with no measurement, so the scroll path reports its own cost. Silent
         // unless a frame is actually slow, and throttled so it can never become the problem.
         private static readonly System.Diagnostics.Stopwatch Clock = new System.Diagnostics.Stopwatch();
-        private const double SlowFrameMs = 4.0;
+        /// <summary>
+        /// One frame at 60fps. Below this the player cannot perceive the cost, so reporting it is
+        /// noise — and noise logged at Warn level is worse than useless: it fired on every single
+        /// first draw (measured 4.4ms with 83 entries), so every player would find a WARNING in
+        /// their log the first time they opened the app and reasonably report it as a fault.
+        ///
+        /// A log a player is expected to send you when something breaks has to be quiet when
+        /// nothing has.
+        /// </summary>
+        private const double SlowFrameMs = 16.0;
         private float _nextReportTime;
         private int _rowsConstructed;
 
