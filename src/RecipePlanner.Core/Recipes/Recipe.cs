@@ -139,6 +139,25 @@ namespace RecipePlanner.Core.Recipes
             if (string.IsNullOrEmpty(recipe.Name))
                 recipe.Name = evt.OutputProductName ?? evt.OutputProductId;
 
+            // Back-fill what the recipe could not know when it was first recorded.
+            //
+            // A mix cooked before the player names it has no product yet, so the recipe is created
+            // with an empty OutputProductId — and nothing ever filled it in afterwards, because
+            // this branch only runs for recipes that already exist. The result was a permanently
+            // parentless recipe: PendingNameResolver would repair the *events*, this method would
+            // be called again with the now-named event, and the one field that identifies what the
+            // recipe actually produces stayed blank forever.
+            //
+            // Blank-only, never overwrite: a recipe id is base + steps, so two runs of the same
+            // recipe must produce the same product. A differing value means something is wrong
+            // upstream and silently taking the newer one would hide it.
+            if (string.IsNullOrEmpty(recipe.OutputProductId) && !string.IsNullOrEmpty(evt.OutputProductId))
+                recipe.OutputProductId = evt.OutputProductId;
+            if (string.IsNullOrEmpty(recipe.DrugType) && !string.IsNullOrEmpty(evt.DrugType))
+                recipe.DrugType = evt.DrugType;
+            if (string.IsNullOrEmpty(recipe.BaseProductId) && !string.IsNullOrEmpty(evt.BaseProductId))
+                recipe.BaseProductId = evt.BaseProductId;
+
             recipe.Status |= RecipeStatus.Produced;
             recipe.TimesProduced++;
             if (recipe.FirstProducedUtc == null || evt.RealTimeUtc < recipe.FirstProducedUtc)

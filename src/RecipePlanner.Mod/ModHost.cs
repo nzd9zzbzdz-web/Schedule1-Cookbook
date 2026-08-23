@@ -85,6 +85,17 @@ namespace RecipePlanner.Mod
 
             existing = ReconcileAgainstSave(context, existing);
 
+            // Recipes recorded before their mix was named have no output product, which makes them
+            // unplaceable in the lineage tree. Repaired here rather than on write, because the ones
+            // already on disk would otherwise stay broken until that exact recipe was cooked again.
+            var recipesRepaired = RecipeRepair.BackfillFromEvents(_recipes, existing);
+            if (recipesRepaired > 0)
+            {
+                _recipes.Flush();
+                _log.Info($"Repaired {recipesRepaired} recipe(s) that were recorded before their mix " +
+                          "was named; they can now be placed under their strain.");
+            }
+
             _seen.Seed(existing);
             if (corrupt > 0)
                 _log.Warn($"{corrupt} unreadable line(s) in events.jsonl were skipped (likely a crash mid-write).");
