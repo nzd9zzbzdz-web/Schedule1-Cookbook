@@ -67,9 +67,17 @@ namespace RecipePlanner.PhoneApp
             if (scroll == null) return null;
 
 #if IL2CPP
-            scroll.scrollSensitivity = stepPixels;
-            scroll.inertia = true;
-            scroll.decelerationRate = 0.06f;
+            // ScrollRect multiplies by the raw scrollDelta, which is NOT normalised — depending on
+            // platform and mouse driver one notch arrives as 1, 3, or a fraction. Feeding it a
+            // whole row moved three or four at a time, which is the same trap SmoothScroll was
+            // written to avoid: it takes only the direction from the event and never the magnitude.
+            // That option is not available here, so the step is divided by the common multiplier
+            // instead. A slightly short notch is far easier to live with than one that overshoots.
+            scroll.scrollSensitivity = stepPixels / 3f;
+
+            // Off, not eased. ScrollRect's deceleration glides past wherever the notch landed, and
+            // an overshoot on every notch reads as the list being slippery rather than smooth.
+            scroll.inertia = false;
             return null;
 #else
             scroll.scrollSensitivity = 0f;

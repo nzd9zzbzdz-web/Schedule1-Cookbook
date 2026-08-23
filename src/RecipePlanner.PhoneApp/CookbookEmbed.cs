@@ -46,6 +46,7 @@ namespace RecipePlanner.PhoneApp
         private static CookbookScreen _screen;
         private static GameObject _panel;
         private static GameObject _button;
+        private static Text _buttonLabel;
 
         /// <summary>
         /// True while the panel is built and still attached. Checked against the live objects
@@ -166,11 +167,16 @@ namespace RecipePlanner.PhoneApp
             rect.SetParent(container, false);
             Unmanaged(go);
 
+            // Left of the far corner on purpose. The Mix Guide anchors its own Close button to the
+            // header's right edge at -82 with a width of 74, so a button sitting at -16 covers it
+            // completely — and the Mix Guide fills the panel, which made it genuinely difficult to
+            // get back out of. Starting at -130 clears that button with room to spare, and the
+            // Cookbook header has nothing on its right at all.
             rect.anchorMin = new Vector2(1f, 1f);
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(1f, 1f);
-            rect.anchoredPosition = new Vector2(-16f, -16f);
-            rect.sizeDelta = new Vector2(150f, 44f);
+            rect.anchoredPosition = new Vector2(-130f, -14f);
+            rect.sizeDelta = new Vector2(108f, 32f);
 
             var body = go.AddComponent<Image>();
             body.sprite = UiSkin.Pill;
@@ -191,6 +197,7 @@ namespace RecipePlanner.PhoneApp
 
             var text = label.AddComponent<Text>();
             text.text = "COOKBOOK";
+            _buttonLabel = text;
             text.alignment = TextAnchor.MiddleCenter;
             text.color = OnNeon;
             text.raycastTarget = false;
@@ -212,6 +219,10 @@ namespace RecipePlanner.PhoneApp
             // Kept above the panel: the panel is opaque and both are children of the same
             // container, so without this the button is painted over the moment it is used.
             if (_button != null) _button.transform.SetAsLastSibling();
+
+            // Says what it will do next rather than what it opened. This is the only way back to
+            // the product list, so it has to read as an exit once the panel covers everything.
+            if (_buttonLabel != null) _buttonLabel.text = opening ? "PRODUCTS" : "COOKBOOK";
 
             if (!opening) return;
 
@@ -270,6 +281,7 @@ namespace RecipePlanner.PhoneApp
         internal static void Forget()
         {
             _screen = null;
+            _buttonLabel = null;
             _panel = null;
             _button = null;
         }
