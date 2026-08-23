@@ -39,6 +39,12 @@ namespace RecipePlanner.PhoneApp
             // on the IL2CPP branch it never does, and the builder simply finds nothing bound.
             RecipePlannerUI.CacheInvalidated = IconSource.Clear;
 
+            // Reaching here means IsInstalled was false, so any previous app object — and every
+            // Image referencing these sprites — is already destroyed. Dropping the textures now is
+            // therefore safe, and skipping it would leak a set per save load, since the phone is
+            // rebuilt each time. See UiSkin.
+            UiSkin.Clear();
+
             try
             {
                 var source = FindTemplateApp();

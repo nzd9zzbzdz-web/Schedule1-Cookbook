@@ -226,6 +226,10 @@ namespace RecipePlanner.PhoneApp
             _listContent.anchoredPosition = Vector2.zero;
             _listContent.sizeDelta = Vector2.zero;
 
+            // Built last so it draws over the list. It lives outside the viewport on purpose —
+            // see BuildEffectsCard.
+            BuildEffectsCard(font);
+
             // NO nested Canvas here. It was tried, to confine uGUI batch rebuilds to the list rather
             // than dirtying the phone's whole canvas on every scroll step, and it made the list
             // invisible: rows were constructed, bound and active — the instrumentation counted ten
@@ -331,6 +335,13 @@ namespace RecipePlanner.PhoneApp
         public void Refresh()
         {
             var font = ResolveFont(_root);
+
+            // The rows about to be rebuilt are the ones the card was describing, and after a sort
+            // or filter change the row it was pinned beside may not even be on screen. Dropping it
+            // is the only honest option: a card left floating over a re-sorted list is pointing at
+            // the wrong recipe.
+            _pinnedProductId = null;
+            HideEffects();
 
             _model = RecipePlannerUI.DataSource?.Invoke();
             RefreshToolbar(_model);
@@ -554,6 +565,15 @@ namespace RecipePlanner.PhoneApp
 
         private void UpdateWindow()
         {
+            // Rows are recycled as the list scrolls, so the row the card is anchored beside is
+            // about to show a different recipe. Keeping the card there would leave it pointing at
+            // the wrong row — worse than simply dismissing it.
+            if (_pinnedProductId != null || (_effectsCard != null && _effectsCard.gameObject.activeSelf))
+            {
+                _pinnedProductId = null;
+                HideEffects();
+            }
+
             Clock.Reset();
             Clock.Start();
             var constructedBefore = _rowsConstructed;
@@ -742,15 +762,30 @@ namespace RecipePlanner.PhoneApp
                 tile.Root.offsetMax = new Vector2(x + width, -TileInset);
 
                 tile._border = tile.Root.gameObject.AddComponent<Image>();
+                tile._border.sprite = UiSkin.Body;
+                tile._border.type = Image.Type.Sliced;
 
                 // The border is this image showing through around an inset fill — a mod has no
-                // sprite assets to draw a real outline with.
+                // sprite assets to draw a real outline with, so the "outline" is the gap.
                 var fillRect = CreateChild(tile.Root, "Fill");
                 Anchor(fillRect, Vector2.zero, Vector2.one,
                        new Vector2(TileBorder, TileBorder), new Vector2(-TileBorder, -TileBorder));
                 tile._fill = fillRect.gameObject.AddComponent<Image>();
+                tile._fill.sprite = UiSkin.Body;
+                tile._fill.type = Image.Type.Sliced;
                 tile._fill.raycastTarget = false;
-                AddGloss(fillRect, 0.12f, 0.20f);
+
+                // Tiles get the same underglow as the buttons, so hovering a strain reads the same
+                // way as hovering anything else in the app.
+                var tileGlowRect = CreateChild(tile.Root, "Glow");
+                Anchor(tileGlowRect, Vector2.zero, Vector2.one,
+                       new Vector2(-GlowInset, -GlowInset), new Vector2(GlowInset, GlowInset));
+                tileGlowRect.SetAsFirstSibling();
+                var tileGlow = tileGlowRect.gameObject.AddComponent<Image>();
+                tileGlow.sprite = UiSkin.Glow;
+                tileGlow.type = Image.Type.Sliced;
+                tileGlow.raycastTarget = false;
+                HoverGlow.Attach(tile.Root.gameObject, tileGlow, GlowRest, GlowHot);
 
                 var sprite = rootProductId != null ? IconSource.Product(rootProductId) : null;
                 if (sprite != null)
@@ -851,7 +886,37 @@ namespace RecipePlanner.PhoneApp
                 view.Root.pivot = new Vector2(0.5f, 1f);
 
                 view._stripe = view.Root.gameObject.AddComponent<Image>();
-                view._stripe.raycastTarget = false;
+
+                // Raycastable so the row can be hovered. Drag and scroll are not handled here, so
+                // they still bubble up to the ScrollRect exactly as before.
+                view._stripe.raycastTarget = true;
+
+                // Hover previews the recipe's effects; clicking pins the card so it survives the
+                // pointer moving away — useful when reading a long effect list or comparing rows.
+                var hover = HoverGlow.Attach(view.Root.gameObject, null, Transparent, Transparent);
+                hover.HoverChanged += isHot =>
+                {
+                    if (view._entry == null) return;
+                    if (isHot) view._screen.ShowEffects(view.Root, view._entry, view._font);
+                    else if (view._screen._pinnedProductId == null) view._screen.HideEffects();
+                };
+
+                var rowButton = view.Root.gameObject.AddComponent<Button>();
+                rowButton.targetGraphic = view._stripe;
+                rowButton.transition = Selectable.Transition.None;   // the stripe carries row banding
+                rowButton.onClick.AddListener(() =>
+                {
+                    try
+                    {
+                        if (view._entry == null) return;
+                        var screen = view._screen;
+                        var id = view._entry.ProductId;
+
+                        if (screen._pinnedProductId == id) { screen._pinnedProductId = null; screen.HideEffects(); }
+                        else { screen._pinnedProductId = id; screen.ShowEffects(view.Root, view._entry, view._font); }
+                    }
+                    catch (Exception ex) { RecipePlannerUI.Log?.Warn("Effects card failed: " + ex.Message); }
+                });
 
                 // A hairline under every row, rather than relying on the alternating tint alone:
                 // banding separates pairs of rows, an edge separates each one from the next.
@@ -1042,8 +1107,7 @@ namespace RecipePlanner.PhoneApp
                 button.offsetMax = new Vector2(-8f, -18f);
 
                 var image = button.gameObject.AddComponent<Image>();
-                image.color = ButtonIdle;
-                AddGloss(button, 0.12f, 0.14f);
+                StyleRoundedButton(button, image);
 
                 _hideGlyph = CreateText(button, "Glyph", "x", font, StatFontSize, FontStyle.Bold);
                 _hideGlyph.alignment = TextAnchor.MiddleCenter;
@@ -1051,6 +1115,7 @@ namespace RecipePlanner.PhoneApp
 
                 var clickable = button.gameObject.AddComponent<Button>();
                 clickable.targetGraphic = image;
+                clickable.colors = ButtonColours;
                 clickable.onClick.AddListener(() =>
                 {
                     try
@@ -1187,8 +1252,7 @@ namespace RecipePlanner.PhoneApp
             button.offsetMax = new Vector2(x + width, -2f);
 
             var image = button.gameObject.AddComponent<Image>();
-            image.color = ButtonIdle;
-            AddGloss(button);
+            StyleRoundedButton(button, image);
 
             var text = CreateText(button, "Label", label, font, ToolFontSize, FontStyle.Normal);
             text.alignment = TextAnchor.MiddleCenter;
@@ -1197,6 +1261,7 @@ namespace RecipePlanner.PhoneApp
 
             var clickable = button.gameObject.AddComponent<Button>();
             clickable.targetGraphic = image;
+            clickable.colors = ButtonColours;
             clickable.onClick.AddListener(() => { try { onClick(); } catch { } });
 
             x += width + 4f;
@@ -1253,7 +1318,234 @@ namespace RecipePlanner.PhoneApp
                 _hiddenLabel.text = _query.ShowHidden ? "Hidden: on" : "Hidden: off";
         }
 
+        // ---------- effects card ----------
+
+        private RectTransform _effectsCard;
+        private Image _effectsBackdrop;
+        private Text _effectsTitle;
+        private readonly List<Text> _effectChips = new List<Text>();
+        private string _pinnedProductId;
+
+        private const float CardWidth = 250f;
+        private const float CardPad = 10f;
+        private const float ChipHeight = 26f;
+        private const float ChipGap = 4f;
+        private const float CardTitleHeight = 26f;
+
+        /// <summary>
+        /// A floating card listing every effect a recipe carries.
+        ///
+        /// A child of the app root rather than of the list, deliberately: the viewport has a
+        /// RectMask2D, so a card built inside it would be clipped the moment it extended past a row.
+        /// Nothing in it is a raycast target either — it follows the pointer around and must never
+        /// end up swallowing the click meant for whatever is underneath.
+        ///
+        /// Effects were previously invisible in-game. They were recorded per recipe from the moment
+        /// of the cook and only ever surfaced in the exported cookbook.md.
+        /// </summary>
+        private void BuildEffectsCard(Font font)
+        {
+            _effectsCard = CreateChild(_root, "EffectsCard");
+            _effectsCard.anchorMin = new Vector2(0f, 1f);
+            _effectsCard.anchorMax = new Vector2(0f, 1f);
+            _effectsCard.pivot = new Vector2(0f, 1f);
+            _effectsCard.sizeDelta = new Vector2(CardWidth, 100f);
+
+            var glowRect = CreateChild(_effectsCard, "Glow");
+            Anchor(glowRect, Vector2.zero, Vector2.one, new Vector2(-8f, -8f), new Vector2(8f, 8f));
+            var glow = glowRect.gameObject.AddComponent<Image>();
+            glow.sprite = UiSkin.Glow;
+            glow.type = Image.Type.Sliced;
+            glow.raycastTarget = false;
+            glow.color = CardGlow;
+
+            _effectsBackdrop = _effectsCard.gameObject.AddComponent<Image>();
+            _effectsBackdrop.sprite = UiSkin.Body;
+            _effectsBackdrop.type = Image.Type.Sliced;
+            _effectsBackdrop.color = CardBackdrop;
+            _effectsBackdrop.raycastTarget = false;
+
+            _effectsTitle = CreateText(_effectsCard, "Title", "", font, StatFontSize, FontStyle.Bold);
+            _effectsTitle.color = HeaderText;
+            _effectsTitle.alignment = TextAnchor.MiddleLeft;
+            _effectsTitle.raycastTarget = false;
+            Anchor(_effectsTitle.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f),
+                   new Vector2(CardPad, -CardPad - CardTitleHeight), new Vector2(-CardPad, -CardPad));
+
+            _effectsCard.gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// Chips are pooled and reused. A recipe can carry eight effects or none, and rebuilding
+        /// the card's children on every hover would allocate constantly while the pointer travels
+        /// down a list.
+        /// </summary>
+        private Text ChipAt(int index, Font font)
+        {
+            while (_effectChips.Count <= index)
+            {
+                var chipRect = CreateChild(_effectsCard, "Chip" + _effectChips.Count);
+                chipRect.anchorMin = new Vector2(0f, 1f);
+                chipRect.anchorMax = new Vector2(1f, 1f);
+                chipRect.pivot = new Vector2(0.5f, 1f);
+
+                var background = chipRect.gameObject.AddComponent<Image>();
+                background.sprite = UiSkin.Body;
+                background.type = Image.Type.Sliced;
+                background.color = ChipBackdrop;
+                background.raycastTarget = false;
+
+                var label = CreateText(chipRect, "Label", "", font, StatFontSize - 2, FontStyle.Bold);
+                label.alignment = TextAnchor.MiddleLeft;
+                label.raycastTarget = false;
+                Anchor(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(10f, 0f), new Vector2(-8f, 0f));
+
+                _effectChips.Add(label);
+            }
+
+            return _effectChips[index];
+        }
+
+        /// <summary>Shows the card for one entry, positioned beside the row it belongs to.</summary>
+        private void ShowEffects(RectTransform row, CookbookEntry entry, Font font)
+        {
+            if (_effectsCard == null || entry == null || row == null) return;
+
+            var effects = entry.Effects ?? new List<string>();
+            _effectsTitle.text = effects.Count > 0
+                ? entry.DisplayName
+                : entry.DisplayName + "  —  no effects recorded";
+
+            for (var i = 0; i < _effectChips.Count; i++)
+                _effectChips[i].transform.parent.gameObject.SetActive(false);
+
+            var y = -CardPad - CardTitleHeight - ChipGap;
+            for (var i = 0; i < effects.Count; i++)
+            {
+                var chip = ChipAt(i, font);
+                var chipRect = (RectTransform)chip.transform.parent;
+
+                chipRect.gameObject.SetActive(true);
+                chipRect.offsetMin = new Vector2(CardPad, 0f);
+                chipRect.offsetMax = new Vector2(-CardPad, 0f);
+                chipRect.sizeDelta = new Vector2(chipRect.sizeDelta.x, ChipHeight);
+                chipRect.anchoredPosition = new Vector2(0f, y);
+
+                chip.text = effects[i];
+                chip.color = EffectColour(effects[i]);
+
+                y -= ChipHeight + ChipGap;
+            }
+
+            var height = CardPad + CardTitleHeight + ChipGap
+                       + Mathf.Max(effects.Count, 0) * (ChipHeight + ChipGap) + CardPad;
+            _effectsCard.sizeDelta = new Vector2(CardWidth, height);
+
+            PositionCardBeside(row, height);
+            _effectsCard.gameObject.SetActive(true);
+            _effectsCard.SetAsLastSibling();
+        }
+
+        /// <summary>
+        /// Places the card to the right of the row, flipping it up when it would run off the
+        /// bottom of the screen. Both rects are converted through world space because the row lives
+        /// inside a scrolling container and the card does not.
+        /// </summary>
+        private void PositionCardBeside(RectTransform row, float height)
+        {
+            var corners = new Vector3[4];
+            row.GetWorldCorners(corners);
+
+            var topLeft = (Vector2)_root.InverseTransformPoint(corners[1]);
+            var bottomRight = (Vector2)_root.InverseTransformPoint(corners[3]);
+
+            var rootRect = _root.rect;
+            var x = Mathf.Min(bottomRight.x - CardWidth - 56f, rootRect.xMax - CardWidth - 8f);
+            x = Mathf.Max(x, rootRect.xMin + 8f);
+
+            var y = topLeft.y;
+            if (y - height < rootRect.yMin + 8f) y = rootRect.yMin + 8f + height;
+            y = Mathf.Min(y, rootRect.yMax - 8f);
+
+            _effectsCard.anchoredPosition = new Vector2(x - rootRect.xMin, y - rootRect.yMax);
+        }
+
+        private void HideEffects()
+        {
+            if (_effectsCard != null) _effectsCard.gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// A stable colour per effect name, so "Sneaky" is the same shade every time it appears and
+        /// the eye learns them. Derived from the name rather than a table because the game's effect
+        /// list is data, not a constant of ours — a future update adding one should not need a code
+        /// change here. Saturation and lightness are fixed so nothing comes out muddy or unreadable.
+        /// </summary>
+        private static Color EffectColour(string effect)
+        {
+            if (string.IsNullOrEmpty(effect)) return NameText;
+
+            unchecked
+            {
+                var hash = 17;
+                foreach (var c in effect) hash = hash * 31 + char.ToLowerInvariant(c);
+                var hue = Mathf.Abs(hash % 360) / 360f;
+                return Color.HSVToRGB(hue, 0.45f, 1f);
+            }
+        }
+
+        /// <summary>
+        /// Gives a control the rounded body and the underglow that lights on hover.
+        ///
+        /// The glow is a sibling drawn *behind* the body and inset outwards, so it reads as light
+        /// spilling from underneath rather than as a border. It sits at low alpha at rest and is
+        /// lifted by <see cref="HoverGlow"/>, which drives it in step with uGUI's own colour tint
+        /// on the body — tinting only the body makes it pop while the glow stays flat.
+        /// </summary>
+        private static Image StyleRoundedButton(RectTransform target, Image body)
+        {
+            var glowRect = CreateChild(target, "Glow");
+            Anchor(glowRect, Vector2.zero, Vector2.one,
+                   new Vector2(-GlowInset, -GlowInset), new Vector2(GlowInset, GlowInset));
+
+            // Behind the body, and behind anything added later (label, icon).
+            glowRect.SetAsFirstSibling();
+
+            var glow = glowRect.gameObject.AddComponent<Image>();
+            glow.sprite = UiSkin.Glow;
+            glow.type = Image.Type.Sliced;
+            glow.raycastTarget = false;   // never steal the click from the button underneath it
+            glow.color = GlowRest;
+
+            body.sprite = UiSkin.Body;
+            body.type = Image.Type.Sliced;
+            body.color = ButtonIdle;
+
+            HoverGlow.Attach(target.gameObject, glow, GlowRest, GlowHot);
+            return glow;
+        }
+
         // ---------- palette ----------
+
+        private const float GlowInset = 6f;
+
+        /// <summary>
+        /// Hover is a good deal brighter than rest on purpose. The phone is viewed at a distance in
+        /// a dim scene, and the subtle 0.10 → 0.15 lift uGUI defaults to is invisible there.
+        /// </summary>
+        private static ColorBlock ButtonColours => new ColorBlock
+        {
+            normalColor = Color.white,
+            highlightedColor = new Color(1.55f, 1.55f, 1.65f, 1f),
+            pressedColor = new Color(0.75f, 0.78f, 0.85f, 1f),
+            selectedColor = Color.white,
+            disabledColor = new Color(1f, 1f, 1f, 0.35f),
+            colorMultiplier = 1f,
+            fadeDuration = 0.09f,
+        };
+
+        private static readonly Color GlowRest = new Color(0.55f, 0.72f, 1f, 0.10f);
+        private static readonly Color GlowHot = new Color(0.62f, 0.80f, 1f, 0.42f);
 
         private static readonly Color Transparent = new Color(0f, 0f, 0f, 0f);
         private static readonly Color ButtonIdle = new Color(1f, 1f, 1f, 0.10f);
@@ -1274,6 +1566,10 @@ namespace RecipePlanner.PhoneApp
         private static readonly Color BarTrack = new Color(1f, 1f, 1f, 0.07f);
         private static readonly Color RowStripe = new Color(1f, 1f, 1f, 0.045f);
         private static readonly Color Favourite = new Color(1f, 0.80f, 0.30f, 1f);
+
+        private static readonly Color CardBackdrop = new Color(0.09f, 0.10f, 0.13f, 0.97f);
+        private static readonly Color CardGlow = new Color(0.55f, 0.72f, 1f, 0.30f);
+        private static readonly Color ChipBackdrop = new Color(1f, 1f, 1f, 0.07f);
 
         /// <summary>
         /// The cookbook keys recipes by base + additive chain, so an entry whose origin is unknown
