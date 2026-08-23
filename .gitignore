@@ -5,3 +5,6 @@ obj/
 
 # Built payload: attached to releases instead of tracked (see docs/05-RELEASE-ROADMAP.md R0)
 dist/
+
+# Release archives: attached to the Nexus release, not tracked
+release/

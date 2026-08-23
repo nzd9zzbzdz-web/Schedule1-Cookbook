@@ -1,23 +1,28 @@
-# Schedule I — Recipe Planner & Production Manager
+# Schedule I Cookbook
 
-A mod that turns Schedule I's mixing system into a personal cookbook and production record.
+An automatic cookbook and production record for Schedule I's mixing system.
 
-It answers three questions:
+It answers two questions:
 
-- **What can I make?** — recipe planning and optimisation
-- **How do I make it?** — ingredients, order, effects, costs
-- **What have I made?** — automatic production history, lifetime statistics, discovered recipes
+- **How do I make it?** — every recipe you have discovered, grouped by strain, with the full
+  ingredient chain that leads to it
+- **What have I made?** — production history and lifetime statistics, recorded automatically
 
-Production is tracked **automatically**. The player never tells the mod they cooked something —
-the mod hooks the game's own completion events.
+Production is tracked **automatically**. You never tell the mod you cooked something — it hooks the
+game's own completion events. It never writes to your save.
+
+> **Not a planner yet.** Recipe *planning*, prediction and optimisation are on the roadmap but are
+> not built. What works today is the cookbook and the production record. See
+> [02-ROADMAP.md](docs/02-ROADMAP.md).
 
 ## Status
 
-**Working in-game.** Automatic production tracking is confirmed end-to-end on a live session.
+**Working in-game**, pre-release. Automatic production tracking is confirmed end-to-end on a live
+session.
 
-- `dotnet test` -> **119 passing**
+- `dotnet test` → **211 passing**
 - Hook table verified **13/13** against both the shipped binary and the live IL2CPP proxies
-- Phases 0, 1, 7, 8, 9, 10, 11, 12, 18 confirmed live; see the [roadmap](docs/02-ROADMAP.md)
+- Roadmap phases 0, 1, 7, 8, 9, 10, 11, 12, 18 confirmed live
 
 Real output from a running game:
 
@@ -33,19 +38,61 @@ Production ignored (DuplicateEvent): station eeb1f5a2…, hairypuke+paracetamol 
 After a full process restart: `20 units across 1 batches, 1 recipes` — 20 rather than 40, because
 the employee-cooked batch is recorded but kept out of personal totals.
 
-**Next:** the statistics dashboard (Phase 13) and a real price source (Phase 5) — every money figure
-currently reads 0.
+### Before release
+
+Release readiness is tracked in [05-RELEASE-ROADMAP.md](docs/05-RELEASE-ROADMAP.md). Outstanding:
+
+| Step | What is left |
+|---|---|
+| R1 | Live confirmation on **both** Steam branches — the code is done and statically verified |
+| R5 | Live confirmation that prices load; the code is written but its failure mode is a silent `$0` |
+| R6 | Multiplayer client-vs-host behaviour needs testing and documenting |
+| R8 | Screenshots |
+
+## Which Steam branch?
+
+Both work, but they do not get the same features.
+
+| | Default (IL2CPP) | `alternate` (Mono) |
+|---|---|---|
+| Production tracking, history, statistics | ✅ | ✅ |
+| Automatic recipe discovery | ✅ | ✅ |
+| **Cookbook app on the in-game phone** | ❌ | ✅ |
+
+The tracking half reaches the game purely by reflection and resolves `ScheduleOne.*` and the
+`Il2CppScheduleOne.*` proxy names alike, so it is branch-agnostic. The phone UI is not: building UI
+means creating components *inside* the game, and subclassing the generic `App<T>` base is the case
+Il2CppInterop handles worst.
+
+The mod detects the branch at startup and says which mode it is in. On IL2CPP it loads, tracks, and
+tells you the app is unavailable — it does not fail.
+
+## Install
+
+See **[06-INSTALL.md](docs/06-INSTALL.md)**.
+
+## Layout
 
 | Project | Target | Needs the game? |
 |---|---|---|
 | `RecipePlanner.Core` | netstandard2.0 | No — identity, tracker, statistics, storage, recipes |
 | `RecipePlanner.Game` | netstandard2.0 | No — reflection bindings + `SymbolGuard` |
+| `RecipePlanner.UI` | netstandard2.0 | No — view model, data builder, the UI seam |
 | `RecipePlanner.Mod` | netstandard2.0 | Only MelonLoader + Harmony |
+| `RecipePlanner.PhoneApp` | netstandard2.1 | **Yes — links Assembly-CSharp; Mono branch only** |
 
-One assembly serves **both** Steam branches: there is no reference to `Assembly-CSharp` anywhere,
-and `SymbolGuard` resolves `ScheduleOne.*` and the `Il2CppScheduleOne.*` proxy names alike.
+Four of the five assemblies have no game reference at all. `RecipePlanner.PhoneApp` is the single
+Mono-only piece, and nothing links it at compile time — `PhoneAppLoader` loads it by name at
+runtime, which is what keeps the mod alive on the IL2CPP branch.
 
-Headline audit findings:
+```bash
+dotnet build -c Release   # also stages the payload into dist\
+dotnet test               # 211 passing
+```
+
+`Newtonsoft.Json` is **not** shipped — MelonLoader provides 13.0.4 on every host.
+
+## Headline audit findings
 
 - **Production detection is solved.** `MixingStation.MixingDone()` is reached on every client, after
   completion is confirmed, with `CurrentMixOperation` still populated — product, ingredient,
@@ -54,11 +101,9 @@ Headline audit findings:
   exposes it at runtime. `OrganisationName` is the character name; `CreationDate` + `Seed` make a
   stable profile key that survives slot reuse.
 - **Recipe discovery is a first-class game event.** `ProductManager.onMixRecipeAdded`,
-  `onNewProductCreated` and `onProductDiscovered` already exist — the cookbook can build itself.
+  `onNewProductCreated` and `onProductDiscovered` already exist — the cookbook builds itself.
 - **Randomized mix maps exist** (`Game.json` → `UseRandomizedMixMaps`), which rules out shipping a
   static recipe table copied from a wiki.
-- **A Mono branch exists and is the build target.** Steam's own metadata describes the `alternate`
-  branch as *"Uses Mono instead of IL2CPP as the scripting backend."* The default branch is IL2CPP.
 - **`MixingStationMk2` overrides `MixingDone`**, so both it and the base class must be patched —
   missing this would silently detect nothing on Mk2 stations.
 
@@ -68,9 +113,12 @@ Headline audit findings:
 |---|---|
 | [00-PHASE-0-AUDIT.md](docs/00-PHASE-0-AUDIT.md) | The audit: identity, production hooks, call flows, multiplayer, accuracy risks |
 | [01-ARCHITECTURE.md](docs/01-ARCHITECTURE.md) | Layers, services, and the one flow that matters |
-| [02-ROADMAP.md](docs/02-ROADMAP.md) | Phases 0–18, each with an exit test and current status |
+| [02-ROADMAP.md](docs/02-ROADMAP.md) | Feature phases 0–18, each with an exit test and current status |
 | [03-DATA-MODEL.md](docs/03-DATA-MODEL.md) | Storage layout, event schema, durability rules |
-| [04-SETUP.md](docs/04-SETUP.md) | Branch switch, MelonLoader, building, and Phase 9 acceptance |
+| [04-SETUP.md](docs/04-SETUP.md) | Developer setup: branch switch, MelonLoader, building |
+| [05-RELEASE-ROADMAP.md](docs/05-RELEASE-ROADMAP.md) | What is left before publishing to Nexus |
+| [06-INSTALL.md](docs/06-INSTALL.md) | **Player-facing install guide** |
+| [07-NEXUS-PAGE.md](docs/07-NEXUS-PAGE.md) | Draft copy for the Nexus mod page |
 
 ## Tooling
 
@@ -104,3 +152,7 @@ hook table no longer matches, so it drops straight into CI.
 3. **Events are the source of truth.** Every statistic is recomputable from the event log.
 4. **Fail closed.** If a hook cannot be verified against the running game, the tracker disables
    itself and says so. Wrong statistics are worse than no statistics.
+
+## Licence
+
+[MIT](LICENSE).

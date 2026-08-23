@@ -6,7 +6,11 @@ using MelonLoader;
 using RecipePlanner.Game.Binding;
 using RecipePlanner.UI;
 
-[assembly: MelonInfo(typeof(RecipePlanner.Mod.RecipePlannerMod), "Recipe Planner", "0.1.0", "Schedule1RecipePlanner")]
+// Name, version and author are the three things a player sees in the MelonLoader console and in
+// mod managers, so they must match the Nexus page exactly. "Cookbook" rather than "Recipe Planner":
+// planning and optimisation are not built yet, and a name that promises them invites the complaint.
+// See docs/05-RELEASE-ROADMAP.md R2.
+[assembly: MelonInfo(typeof(RecipePlanner.Mod.RecipePlannerMod), "Schedule I Cookbook", "0.9.0", "Sean")]
 [assembly: MelonGame("TVGS", "Schedule I")]
 
 namespace RecipePlanner.Mod
@@ -35,7 +39,7 @@ namespace RecipePlanner.Mod
         public override void OnInitializeMelon()
         {
             Instance = this;
-            LoggerInstance.Msg("Recipe Planner starting — verifying game symbols before patching.");
+            LoggerInstance.Msg("Schedule I Cookbook starting — verifying game symbols before patching.");
 
             var gameAssemblies = SymbolGuard
                 .GameAssemblies(AppDomain.CurrentDomain.GetAssemblies())
@@ -44,9 +48,10 @@ namespace RecipePlanner.Mod
             if (gameAssemblies.Count == 0)
             {
                 LoggerInstance.Error(
-                    "No Schedule I game assembly found. On the IL2CPP branch, proxy assemblies must " +
-                    "be generated first. See docs/04-SETUP.md — the Mono 'alternate' branch is the " +
-                    "supported target.");
+                    "No Schedule I game assembly found, so nothing was patched. On the default " +
+                    "IL2CPP branch this usually means MelonLoader has not finished generating its " +
+                    "proxy assemblies yet — close the game, launch it again, and let the first-run " +
+                    "generation complete (it can take a minute).");
                 return;
             }
 

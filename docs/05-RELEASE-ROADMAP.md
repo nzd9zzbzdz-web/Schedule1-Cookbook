@@ -67,31 +67,34 @@ compiler found it. That call is now routed through `RecipePlannerUI.CacheInvalid
 the phone app binds to `IconSource.Clear` when it installs. Behaviour is unchanged; the dependency
 is gone. **Lesson: a `using`-based dependency audit misses same-namespace types.**
 
-Current PhoneApp sources by dependency:
+Where each source ended up:
 
-| File | Needs the game? |
-|---|---|
-| `CookbookViewModel.cs` | **No** — Core only |
-| `CookbookDataBuilder.cs` | **No** — Core + `RecipePlanner.Game.Binding` (reflection) |
-| `RecipePlannerUI` (inside `CookbookApp.cs:145`) | **No** — a static bridge of delegates |
-| `CookbookScreen.cs`, `AppIconFactory.cs`, `SmoothScroll.cs` | UnityEngine only |
-| `CookbookApp.cs`, `CookbookAppInstaller.cs`, `IconSource.cs` | `ScheduleOne.*` — Mono-only |
+| File | Needs the game? | Now lives in |
+|---|---|---|
+| `CookbookViewModel.cs` | No — Core only | `RecipePlanner.UI` |
+| `CookbookDataBuilder.cs` | No, *after* the `IconSource` call was routed through the seam | `RecipePlanner.UI` |
+| `RecipePlannerUI` (was inside `CookbookApp.cs`) | No — a static bridge of delegates | `RecipePlanner.UI` |
+| `CookbookScreen.cs`, `AppIconFactory.cs`, `SmoothScroll.cs` | UnityEngine only | `RecipePlanner.PhoneApp` |
+| `CookbookApp.cs`, `CookbookAppInstaller.cs`, `IconSource.cs` | `ScheduleOne.*` — Mono-only | `RecipePlanner.PhoneApp` |
 
-1. Create **`RecipePlanner.Cookbook`** (netstandard2.0, no game references). Move
-   `CookbookViewModel.cs` and `CookbookDataBuilder.cs` into it, and **extract** the
-   `RecipePlannerUI` static class out of `CookbookApp.cs` into its own file there.
-2. Leave the six Unity / `ScheduleOne` files in `RecipePlanner.PhoneApp`.
-3. `RecipePlanner.Mod` references `RecipePlanner.Cookbook` directly and **drops its ProjectReference
-   to `RecipePlanner.PhoneApp` entirely**. The mod assembly must not name PhoneApp in its metadata.
-4. Load the UI by reflection at runtime — `Assembly.LoadFrom` the PhoneApp DLL sitting next to the
-   mod, find `CookbookAppInstaller.TryInstall`, invoke it. Wrap in try/catch and log a clear line on
-   failure. The existing `Reflect` helper in `RecipePlanner.Game.Binding` already does this kind of work.
-5. Detect the branch up front and log which mode is active, e.g.
-   `Cookbook app unavailable on the IL2CPP branch — production tracking is running normally.`
-6. Fix the misleading error string at
-   [RecipePlannerMod.cs:60-62](../src/RecipePlanner.Mod/RecipePlannerMod.cs#L60-L62): it currently
-   promises "The planner UI will still work", which is exactly backwards.
-7. Make the PhoneApp csproj's empty-stub fallback harmless now that nothing links it at compile time.
+What was done:
+
+1. Created **`RecipePlanner.UI`** (netstandard2.0, no game references) holding the three game-free
+   pieces above.
+2. Left the six Unity / `ScheduleOne` files in `RecipePlanner.PhoneApp`.
+3. `RecipePlanner.Mod` references `RecipePlanner.UI` and **no longer names `RecipePlanner.PhoneApp`
+   at compile time**. The PhoneApp `ProjectReference` survives only as
+   `ReferenceOutputAssembly="false"`, so it is still built and staged but never enters the mod's
+   metadata. *If that attribute is ever flipped to `true`, the IL2CPP branch breaks again.*
+4. Added [`PhoneAppLoader`](../src/RecipePlanner.Mod/PhoneAppLoader.cs): `Assembly.LoadFrom` the
+   PhoneApp DLL beside the mod, find `CookbookAppInstaller.TryInstall`, invoke it, and degrade to a
+   logged line on any failure.
+5. Added `SymbolGuard.IsMonoBranch` (3 tests) to detect the branch up front and log which mode is
+   active. On IL2CPP the loader is never even constructed.
+6. Rewrote the startup error that promised "The planner UI will still work" when tracking was
+   disabled — it had the two exactly backwards. Also rewrote the "no game assembly found" message,
+   which told players the Mono branch was the only supported target.
+7. `RecipePlanner.UI.dll` added to the `StageMod` payload — without it the mod cannot load at all.
 
 **Exit test:** on the **default IL2CPP branch**, with only the shipped DLLs in `Mods\`: the mod
 loads, `Symbol check PASSED`, `Production tracking ENABLED`, one cooked batch produces exactly one
@@ -128,7 +131,7 @@ place to look.
 
 ---
 
-## R2 — Decide the scope the release is sold as ⬜
+## R2 — Decide the scope the release is sold as ✅
 
 The README opens promising "recipe planning and optimisation". Phases 2, 3, 4, 6, 14, 16 — game data
 reader, effect database, calculation engine, planner UI, comparison, optimisation — are all ⬜ not
@@ -142,9 +145,19 @@ Nexus page (and ideally the MelonInfo display name) to something honest about wh
 **Exit test:** the Nexus title, the `MelonInfo` name, and the README's first paragraph all describe
 the same feature set, and every feature named in them is one a player can actually use today.
 
+**Done.** The name is **"Schedule I Cookbook"** everywhere — `MelonInfo`, the README heading, the
+Nexus draft, and the repo, which was already `Schedule1-Cookbook`. The startup log line matches.
+
+Only the *display* name changed. The assemblies are still `RecipePlanner.*`, because renaming them
+is pure churn that no player ever sees and every namespace touches. If you want them renamed too,
+that is a mechanical follow-up, not a release blocker.
+
+The README now carries an explicit "**Not a planner yet**" callout, and the Nexus draft has a
+"Not included (yet)" section. Under-promising costs nothing and prevents most one-star comments.
+
 ---
 
-## R3 — Truth-up the documentation ⬜
+## R3 — Truth-up the documentation ✅
 
 Reviewers read the README, and yours currently **undersells** the project and contradicts the code:
 
@@ -163,9 +176,22 @@ a separate user-facing install guide (R4).
 [02-ROADMAP.md](02-ROADMAP.md) matches a command you can run; no ⬜ phase is described in the present
 tense anywhere.
 
+**Done.** [README.md](../README.md) rewritten: 211 tests, the pricing claim corrected, the branch
+table made explicit, `RecipePlanner.UI` added to the layout table, and a "Before release" table
+pointing at what is still outstanding.
+
+[02-ROADMAP.md](02-ROADMAP.md) Phase 5 and Phase 13 statuses corrected, and the stale "Immediate
+next step" section replaced — it still said the app had no controls.
+
+One extra correction found while checking: the "what the player asked for" table credited **search**
+as a solution. There is no search box, deliberately — a uGUI `InputField` in the running game steals
+keyboard focus from the player's movement keys
+([CookbookScreen.cs:1124-1129](../src/RecipePlanner.PhoneApp/CookbookScreen.cs#L1124-L1129)). The
+table now says so, and the Nexus draft lists it under "Not included".
+
 ---
 
-## R4 — Write the user-facing install guide ⬜
+## R4 — Write the user-facing install guide ✅
 
 There is currently **no document a Nexus downloader could follow**. It needs to cover:
 
@@ -182,6 +208,16 @@ There is currently **no document a Nexus downloader could follow**. It needs to 
 **Exit test:** someone who has never modded Schedule I follows the guide on a clean install and gets
 a working mod without asking a question. If you cannot recruit a tester, do it yourself from a fresh
 game folder and a wiped `%APPDATA%` directory.
+
+**Written:** [06-INSTALL.md](06-INSTALL.md), covering requirements, the launch-once-first step, the
+file list, how to confirm it loaded, the branch table, data location, uninstall, and a
+troubleshooting section keyed to the actual log messages the mod emits.
+
+A condensed version ships inside the archive as `README.txt`, because plenty of people never open
+the mod page after downloading.
+
+**The exit test itself is not met** — nobody has yet followed it on a clean install. That is the
+check to run alongside R7's live-install test.
 
 ---
 
@@ -218,7 +254,7 @@ session in each role.
 
 ---
 
-## R7 — Package the release ⬜
+## R7 — Package the release 🟡 done except the live-install check
 
 - **LICENSE file.** None exists. Pick one deliberately and fill in the Nexus permissions fields to
   match — they are separate things and Nexus asks for both.
@@ -234,9 +270,33 @@ session in each role.
 **Exit test:** extract the archive over a clean game install with MelonLoader, launch, and it works
 with no extra steps.
 
+**Done, except the exit test itself.**
+
+- **LICENCE** — [MIT](../LICENSE) added. This was a call made on your behalf because a repo with no
+  licence is "all rights reserved" by default, which is worse than any choice. MIT is the common
+  default for game mods and matches fully permissive Nexus fields.
+  **Change it now if you disagree** — it is far easier before the first release than after.
+- **Version** — `0.9.0`, in `MelonInfo`, the Nexus draft and the archive name. Deliberately not
+  `1.0.0`: R1, R5 and R6 are unverified, so calling it 1.0 would be a claim not yet earned. Bump to
+  `1.0.0` when they pass, and tag the commit to match.
+- **`Newtonsoft.Json`** — **verified, not assumed.** MelonLoader 0.7.3 ships `13.0.4` in all three
+  host folders (`net35`, `net472`, `net6`), and the game carries its own copy in
+  `Schedule I_Data/Managed`. We compile against `13.0.3` and do not ship it. Nothing to do.
+- **Release build** — `dist/` is the Release output; a bare `dotnet build` would stage Debug, so
+  [`tools/package.ps1`](../tools/package.ps1) always forces `-c Release`.
+- **No PDBs** — the staging list names DLLs explicitly, so none can leak in.
+- **Archive layout** — `Mods/` prefixed, so mod managers extract to the right place. Produced by
+  `pwsh tools/package.ps1`, which reads the version from `MelonInfo` (so the archive name cannot
+  drift), refuses to build if a required DLL is missing, warns loudly if `RecipePlanner.PhoneApp.dll`
+  is absent (an IL2CPP-only build would silently ship with no UI at all), and prints the archive
+  contents back for inspection.
+
+Current output: `release/Schedule-I-Cookbook-0.9.0.zip`, 88.8 KB, containing `LICENSE`,
+`README.txt` and the five DLLs under `Mods/`.
+
 ---
 
-## R8 — Make the page worth clicking ⬜
+## R8 — Make the page worth clicking 🟡 copy written; screenshots outstanding
 
 - **Screenshots.** The phone app is the entire selling point and there is currently not one image of
   it. At minimum: the cookbook list, a strain section expanded, and the stats view.
@@ -252,19 +312,57 @@ with no extra steps.
 **Exit test:** the page has images, an accurate feature list, requirements, install steps, and a
 known-limitations section.
 
+**Copy written:** [07-NEXUS-PAGE.md](07-NEXUS-PAGE.md) — paste-ready description, the form fields,
+permissions set to match the MIT licence, and a 0.9.0 changelog. It leads on "you never log
+anything" and "it never writes to your save", and carries the fail-closed hook check as the
+differentiator, per the notes above.
+
+**Two things are still missing and only you can supply them:**
+
+1. **Screenshots.** Not one image of the phone app exists. The list of five worth taking is at the
+   bottom of [07-NEXUS-PAGE.md](07-NEXUS-PAGE.md). This is the single highest-value remaining task:
+   the app is the selling point and nobody will read past a page with no pictures of it.
+2. **The multiplayer section**, which is left as a `TODO` marker in the draft, blocked on R6.
+   Do not publish with it unwritten.
+
 ---
 
-## Suggested order
+## Where this stands
 
-R0 first, always. Then R1, because everything else is wasted effort if the mod does not load for
-most of its audience. R5 and R6 both need live game sessions, so batch them together. R2, R3 and R4
-are writing and can happen while the game is closed. R7 and R8 are the last mile.
+| Step | State |
+|---|---|
+| R0 repo | ✅ done |
+| R1 IL2CPP blocker | 🟡 code done and statically verified; **needs a live run on both branches** |
+| R2 scope / naming | ✅ done |
+| R3 documentation | ✅ done |
+| R4 install guide | ✅ written; **needs one clean-install walkthrough** |
+| R5 pricing | ⬜ **needs a live run** |
+| R6 multiplayer | ⬜ **needs a live host + client session** |
+| R7 packaging | 🟡 done; **needs the extract-and-launch check** |
+| R8 page copy | 🟡 written; **needs screenshots** |
 
-```
-R0 ──► R1 ──► R5 ──┬──► R7 ──► R8 ──► publish
-              R6 ──┘
-   R2 ──► R3 ──► R4 ───────┘
-```
+Everything that could be done without launching the game is done. **Every remaining item needs a
+running game**, which is the one thing this could not do.
+
+### The session that finishes this
+
+One sitting, in this order:
+
+1. **Default (IL2CPP) branch.** Extract `release/Schedule-I-Cookbook-0.9.0.zip` over the game folder
+   — that also discharges R7's exit test and R4's walkthrough. Launch, check the log for
+   `Symbol check PASSED`, `Production tracking ENABLED` and `IL2CPP branch detected`. Cook one
+   batch, confirm exactly one `Production Detected`. **That closes R1's live half** — the thing that
+   was blocking release.
+2. **Same session:** check the log for `Prices loaded: N products, M ingredients` with non-zero
+   counts, and compare a recorded batch value against the game's own quoted price. **R5.**
+3. **Switch to the `alternate` branch.** Confirm the Cookbook app still appears — it installs
+   through a new code path now and a regression there is invisible to every static check. Take the
+   five screenshots while you are in there. **R8.**
+4. **Multiplayer, host and client.** Note what each one records. Write it into the `TODO` block in
+   [07-NEXUS-PAGE.md](07-NEXUS-PAGE.md). **R6.**
+5. Bump `MelonInfo` to `1.0.0`, re-run `pwsh tools/package.ps1`, tag the commit, publish.
+
+If step 1 fails, everything else waits — that is still the blocker.
 
 ## Explicitly out of scope for v1
 

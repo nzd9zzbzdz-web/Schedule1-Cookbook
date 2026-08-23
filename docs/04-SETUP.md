@@ -8,11 +8,11 @@
 - **Launched and confirmed live on the IL2CPP branch:**
 
   ```
-  [Recipe_Planner] Recipe Planner starting — verifying game symbols before patching.
-  [Recipe_Planner] Symbol check PASSED (13/13 hooks resolved)
-  [Recipe_Planner] Patched ScheduleOne.ObjectScripts.MixingStation.MixingDone()
-  [Recipe_Planner] Patched ScheduleOne.ObjectScripts.MixingStationMk2.MixingDone()
-  [Recipe_Planner] Production tracking ENABLED.
+  [Schedule_I_Cookbook] Schedule I Cookbook starting — verifying game symbols before patching.
+  [Schedule_I_Cookbook] Symbol check PASSED (13/13 hooks resolved)
+  [Schedule_I_Cookbook] Patched ScheduleOne.ObjectScripts.MixingStation.MixingDone()
+  [Schedule_I_Cookbook] Patched ScheduleOne.ObjectScripts.MixingStationMk2.MixingDone()
+  [Schedule_I_Cookbook] Production tracking ENABLED.
   ```
 
   Il2Cpp proxy generation took ~26 s, not the several minutes usually quoted.
@@ -25,14 +25,15 @@ The only thing left is the Phase 9 acceptance test: load a save and cook one bat
 |---|---|---|
 | `RecipePlanner.Core` | netstandard2.0 | No — all tracking decisions live here |
 | `RecipePlanner.Game` | netstandard2.0 | No — reflection bindings + `SymbolGuard` |
-| `RecipePlanner.Mod` | netstandard2.1 | Only MelonLoader + Harmony |
+| `RecipePlanner.UI` | netstandard2.0 | No — view model, data builder, UI seam |
+| `RecipePlanner.Mod` | netstandard2.0 | Only MelonLoader + Harmony |
 | `RecipePlanner.PhoneApp` | netstandard2.1 | **Yes — links Assembly-CSharp; Mono branch only** |
-| `RecipePlanner.Core.Tests` | net10.0 | No — 90 tests |
+| `RecipePlanner.Core.Tests` | net10.0 | No — 211 tests |
 | `tools/HookVerifier` | net10.0 | Reads game assemblies offline |
 
 ```bash
 dotnet build      # also stages the payload into dist\
-dotnet test       # 90 passing
+dotnet test       # 211 passing
 ```
 
 Core, Game and Mod reach the game only by reflection, and `SymbolGuard` resolves both
@@ -43,7 +44,15 @@ stay branch-agnostic.
 components *inside* the game, and subclassing the generic `App<T>` base through Il2CppInterop is the
 case it handles worst. If IL2CPP support is ever wanted again, only that project needs reworking.
 
-`Newtonsoft.Json` is **not** shipped — MelonLoader and the game both provide it.
+**Nothing links `RecipePlanner.PhoneApp` at compile time.** Its `ProjectReference` in
+`RecipePlanner.Mod` carries `ReferenceOutputAssembly="false"`, so it is built and staged but never
+enters `RecipePlanner.dll`'s metadata;
+[`PhoneAppLoader`](../src/RecipePlanner.Mod/PhoneAppLoader.cs) loads it by name at runtime. That is
+what keeps the mod alive on the IL2CPP branch — flipping that attribute to `true` breaks it again.
+See [05-RELEASE-ROADMAP.md](05-RELEASE-ROADMAP.md) R1.
+
+`Newtonsoft.Json` is **not** shipped — MelonLoader 0.7.3 provides 13.0.4 in `net35`, `net472` and
+`net6`, and the game carries its own copy in `Schedule I_Data/Managed`.
 
 ## Step 1 — branch choice (optional)
 
@@ -69,9 +78,9 @@ going through generated proxies.
 dotnet build -c Release
 ```
 
-The build prints the resolved MelonLoader path and stages all four assemblies into `dist\` —
-`RecipePlanner.dll`, `RecipePlanner.Core.dll`, `RecipePlanner.Game.dll` and
-`RecipePlanner.PhoneApp.dll`. Copy `dist\*.dll`
+The build prints the resolved MelonLoader path and stages all five assemblies into `dist\` —
+`RecipePlanner.dll`, `RecipePlanner.Core.dll`, `RecipePlanner.Game.dll`, `RecipePlanner.UI.dll` and
+`RecipePlanner.PhoneApp.dll` (the last only on the Mono branch). Copy `dist\*.dll`
 into `Schedule I\Mods\`. If Steam installed the game elsewhere:
 
 ```bash
@@ -99,20 +108,20 @@ dotnet run --project tools/HookVerifier -- "C:\Program Files (x86)\Steam\steamap
 Read the MelonLoader console. Expected on success:
 
 ```
-[Recipe_Planner] Recipe Planner starting — verifying game symbols before patching.
-[Recipe_Planner] Symbol check PASSED (13/13 hooks resolved)
-[Recipe_Planner] Patched ScheduleOne.ObjectScripts.MixingStation.MixingDone()
-[Recipe_Planner] Patched ScheduleOne.ObjectScripts.MixingStationMk2.MixingDone()
-[Recipe_Planner] Production tracking ENABLED.
+[Schedule_I_Cookbook] Schedule I Cookbook starting — verifying game symbols before patching.
+[Schedule_I_Cookbook] Symbol check PASSED (13/13 hooks resolved)
+[Schedule_I_Cookbook] Patched ScheduleOne.ObjectScripts.MixingStation.MixingDone()
+[Schedule_I_Cookbook] Patched ScheduleOne.ObjectScripts.MixingStationMk2.MixingDone()
+[Schedule_I_Cookbook] Production tracking ENABLED.
 ```
 
 If the game has updated and a hook moved, you get this instead — and **no statistics are recorded**,
 which is the intended behaviour:
 
 ```
-[Recipe_Planner] Symbol check FAILED — tracking disabled to avoid recording incorrect statistics.
-[Recipe_Planner]   [BLOCKING] ScheduleOne.ObjectScripts.MixingStation: missing MixingDone()
-[Recipe_Planner]   Hook table was verified against game version 0.4.5f2. If the game updated,
+[Schedule_I_Cookbook] Symbol check FAILED — tracking disabled to avoid recording incorrect statistics.
+[Schedule_I_Cookbook]   [BLOCKING] ScheduleOne.ObjectScripts.MixingStation: missing MixingDone()
+[Schedule_I_Cookbook]   Hook table was verified against game version 0.4.5f2. If the game updated,
                    the hook table needs re-auditing: node tools/il2cpp-dump/dump.js '<type-regex>'
 ```
 
@@ -132,7 +141,7 @@ node tools/il2cpp-dump/dump.js '^ScheduleOne\.ObjectScripts\.MixingStation$'
 Cook one batch. Expected, exactly once:
 
 ```
-[Recipe_Planner] Production Detected
+[Schedule_I_Cookbook] Production Detected
   Profile   : Echo (SaveGame_1, 9f2c4ab1…)
   Station   : MixingStationMk2 3059421d… (mixingstationmk2)
   Product   : greencrack + mouthwash -> Blue Lightning

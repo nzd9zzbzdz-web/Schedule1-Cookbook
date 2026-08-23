@@ -12,7 +12,7 @@ Legend: ✅ done and tested · 🟡 logic complete and tested, needs the live ga
 | 2 | Game Data Reader | Dump the live mix map, product definitions and prices for the loaded save | 🟡 `GameFacts` reads products; mix-map walk outstanding |
 | 3 | Ingredient & Effect Database | Every ingredient and all 34 effects resolved from game data, not hard-coded | ⬜ |
 | 4 | Recipe Calculation Engine | Predicted effects match the game's actual output for 20 known mixes | ⬜ |
-| 5 | Pricing Engine | Predicted value matches `CalculateProductValue` within rounding for 20 products | 🟡 engine + tests done; needs a real `IPriceSource` |
+| 5 | Pricing Engine | Predicted value matches `CalculateProductValue` within rounding for 20 products | 🟡 engine, tests and `GamePriceSource` all written; needs live confirmation (release roadmap R5) |
 | 6 | Basic Recipe Planner UI | Plan a recipe and see cost / value / effects | ⬜ |
 | 7 | Recipe Saving / Cookbook | Recipes persist across a game restart | ✅ `FileRecipeRepository`, round-trip tested |
 | **8** | **Player & Save Identification** | Two saves → two `ProfileId`s; same save reloaded → same id; recreating a deleted slot does **not** collide | ✅ verified live against 4 real saves |
@@ -20,7 +20,7 @@ Legend: ✅ done and tested · 🟡 logic complete and tested, needs the live ga
 | 10 | Production History | Events survive a restart; replaying the log reproduces identical totals | ✅ verified live across a full process restart |
 | 11 | Player Statistics | Units, batches, per-product breakdown, ingredient usage, value, profit | ✅ verified live (money pending Phase 5) |
 | 12 | Automatic Recipe Discovery | A recipe invented in-game appears in the cookbook unprompted | ✅ verified live |
-| 13 | Cookbook &amp; Stats app | A phone app showing recipes grouped by strain, with the chain | 🟡 app installs and renders; controls outstanding |
+| 13 | Cookbook &amp; Stats app | A phone app showing recipes grouped by strain, with the chain | ✅ installs, renders, and has sort / filter / hide / favourite controls |
 | 14 | Recipe Comparison | — | ⬜ |
 | 15 | Inventory Integration | — | ⬜ |
 | 16 | Recipe Optimization | — | ⬜ |
@@ -32,12 +32,18 @@ game was built first, so the only work left gated on a game launch is the thin b
 
 ### Immediate next step
 
-**Finish the Cookbook app.** It installs onto the phone and the data layer behind it is fully
-tested, but the screen has no controls yet — search, sort and hide all exist in
-[`Cookbook.cs`](../src/RecipePlanner.Core/Recipes/Cookbook.cs) with tests, and nothing calls them.
+**Ship what exists.** Feature work is paused: the cookbook and the production record are done and
+the remaining phases are all additive. What stands between this and a public release is packaging
+and live verification, not features — see [05-RELEASE-ROADMAP.md](05-RELEASE-ROADMAP.md).
 
-**Phase 5 — a real `IPriceSource`** should land alongside, because every money figure currently
-reads 0, which makes two of the seven sort orders useless.
+The two feature items still worth noting:
+
+- **Phase 5** — `GamePriceSource` is written and reads the game's own price table. It has never been
+  confirmed against a running game, and it fails silently to `$0`, which would look like a bug to a
+  player. Release roadmap R5.
+- **Phase 13** — the app has sort, filter, hide and favourites. There is deliberately **no search
+  box**: a uGUI `InputField` inside the running game steals keyboard focus from the player. Sort and
+  filter cover the same need without that risk.
 
 ### What the player asked the Cookbook to fix
 
@@ -45,7 +51,7 @@ Their words, and where each is handled:
 
 | Complaint | Where it is solved |
 |---|---|
-| Hundreds of recipes, impossible to navigate | Collapsible strain sections + search + sort |
+| Hundreds of recipes, impossible to navigate | Collapsible strain sections + 7 sort orders + filters (no search box — see Phase 13 above) |
 | Wants to hide recipes from the UI, not the game | `RecipeStatus.Hidden` — display only; history and stats untouched |
 | Recipes should connect as a production process | `RecipeGraph` lineage, verified on 81 real recipes |
 | Wants to see the progression | `RecipeGraph.BuildTree` per strain |
