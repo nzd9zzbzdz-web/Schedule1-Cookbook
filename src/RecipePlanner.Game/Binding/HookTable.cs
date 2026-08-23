@@ -42,6 +42,15 @@ namespace RecipePlanner.Game.Binding
         public const string MixOperation = NsObjects + "MixOperation";
         public const string MixingDone = "MixingDone";
 
+        // The other two methods this mod patches. Constants rather than literals at the patch site
+        // so there is exactly one spelling of each, and it is the one the symbol check verifies.
+        //
+        // Both were patched by name and never declared, which made them silent failures: Harmony
+        // simply finds no method, the mod logs an Info line, and a real capability disappears
+        // without anything looking wrong.
+        public const string MixingStart = "MixingStart";
+        public const string FinishAndNameMix = "FinishAndNameMix";
+
         public static IReadOnlyList<HookDefinition> All => Definitions;
 
         private static readonly HookDefinition[] Definitions =
@@ -78,7 +87,11 @@ namespace RecipePlanner.Game.Binding
             {
                 TypeName = MixingStation,
                 Purpose = "PRIMARY production hook (audit §2.1)",
-                Methods = new[] { MixingDone, "GetMixQuantity", "GetProduct", "GetMixer" },
+                // MixingStart is how attribution learns who set a batch running: PlayerUserObject is
+                // cleared once the player walks away, long before the batch completes. Losing it
+                // does not stop tracking — it makes every batch unattributed, which quietly stops
+                // them counting as the player's own.
+                Methods = new[] { MixingDone, MixingStart, "GetMixQuantity", "GetProduct", "GetMixer" },
                 Members = new[] { "CurrentMixOperation", "PlayerUserObject", "NPCUserObject" }
             },
             new HookDefinition
@@ -148,7 +161,7 @@ namespace RecipePlanner.Game.Binding
             {
                 TypeName = NsProduct + "ProductManager",
                 Purpose = "Discovery events, mix maps, valuation (audit §2.6/§2.7)",
-                Methods = new[] { "GetMixerMap", "CalculateProductValue", "DiscoverProduct" },
+                Methods = new[] { "GetMixerMap", "CalculateProductValue", "DiscoverProduct", FinishAndNameMix },
                 Members = new[]
                 {
                     "onMixRecipeAdded", "onNewProductCreated", "onProductDiscovered",

@@ -55,7 +55,7 @@ namespace RecipePlanner.Mod
 
                 // MixingStart is the only moment the game knows who set the batch running:
                 // PlayerUserObject is cleared once the player walks away, long before it completes.
-                TryPatch(harmony, type, typeName, "MixingStart", startPostfix);
+                TryPatch(harmony, type, typeName, HookTable.MixingStart, startPostfix);
             }
 
             if (patched == 0)

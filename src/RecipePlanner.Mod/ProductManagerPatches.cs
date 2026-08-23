@@ -18,7 +18,7 @@ namespace RecipePlanner.Mod
     internal static class ProductManagerPatches
     {
         private const string TypeName = HookTable.NsProduct + "ProductManager";
-        private const string MethodName = "FinishAndNameMix";
+        private const string MethodName = HookTable.FinishAndNameMix;
 
         private static ModHost _host;
         private static ILog _log;

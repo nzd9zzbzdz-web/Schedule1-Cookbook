@@ -77,6 +77,31 @@ namespace RecipePlanner.Core.Tests
         }
 
         /// <summary>
+        /// Harmony patches are the other way this mod reaches into the game, and they fail even
+        /// more quietly than a reflective read: Harmony simply finds no method, the mod logs a line
+        /// at Info, and a capability disappears with nothing looking wrong.
+        ///
+        /// Both of these were being patched by name and neither was declared. Losing
+        /// <c>MixingStart</c> makes every batch unattributed, so production stops counting as the
+        /// player's own; losing <c>FinishAndNameMix</c> leaves every unnamed mix stuck awaiting a
+        /// name forever. Neither would have shown up as an error.
+        /// </summary>
+        [Theory]
+        [InlineData("MixingDone")]
+        [InlineData("MixingStart")]
+        [InlineData("FinishAndNameMix")]
+        public void Every_patched_method_is_declared_in_the_hook_table(string method)
+        {
+            var hookTable = File.ReadAllText(
+                Path.Combine(RepoRoot(), "src", "RecipePlanner.Game", "Binding", "HookTable.cs"));
+
+            Assert.True(
+                hookTable.Contains("\"" + method + "\""),
+                $"{method} is patched at runtime but is not declared in HookTable, so a game update "
+                + "that renames it would disable that behaviour silently.");
+        }
+
+        /// <summary>
         /// The names passed to the <c>Reflect</c> helpers. Deliberately a narrow pattern: it matches
         /// the shape the codebase actually uses, and a literal it cannot see is one this test would
         /// wrongly pass. If a new helper is added, it belongs in here too.
