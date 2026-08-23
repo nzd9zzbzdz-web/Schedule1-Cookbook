@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace RecipePlanner.PhoneApp
@@ -38,6 +39,48 @@ namespace RecipePlanner.PhoneApp
             go.AddComponent<RectTransform>();
             return go;
         }
+
+#if IL2CPP
+        /// <summary>
+        /// Delivers pointer enter/exit to something that cannot implement the handler interfaces.
+        ///
+        /// On IL2CPP a MonoBehaviour cannot implement <c>IPointerEnterHandler</c> — Il2CppInterop
+        /// emits those interfaces as classes — so hover simply never fired, and the effects card
+        /// could only be reached by clicking a row.
+        ///
+        /// <c>EventTrigger</c> is the way out: it is a real Unity component that already implements
+        /// every handler interface natively and forwards them to a list of callbacks, so nothing of
+        /// ours needs to implement anything. The same trick the whole embed relies on — use the
+        /// game's own components instead of inventing types the runtime cannot be told about.
+        /// </summary>
+        public static void OnHover(GameObject target, Action<bool> onChanged)
+        {
+            if (target == null || onChanged == null) return;
+
+            try
+            {
+                var trigger = target.GetComponent<EventTrigger>();
+                if (trigger == null) trigger = target.AddComponent<EventTrigger>();
+
+                AddTrigger(trigger, EventTriggerType.PointerEnter, () => onChanged(true));
+                AddTrigger(trigger, EventTriggerType.PointerExit, () => onChanged(false));
+            }
+            catch (Exception ex)
+            {
+                // Hover is a nicety; losing it must never cost the row itself.
+                RecipePlanner.UI.RecipePlannerUI.Log?.Warn("Could not wire hover: " + ex.Message);
+            }
+        }
+
+        private static void AddTrigger(EventTrigger trigger, EventTriggerType type, Action action)
+        {
+            var entry = new EventTrigger.Entry { eventID = type };
+            Action<BaseEventData> handler = _ => action();
+            entry.callback.AddListener(
+                Il2CppInterop.Runtime.DelegateSupport.ConvertDelegate<UnityAction<BaseEventData>>(handler));
+            trigger.triggers.Add(entry);
+        }
+#endif
 
         /// <summary>Runs <paramref name="action"/> when the button is clicked.</summary>
         public static void OnClick(Button button, Action action)

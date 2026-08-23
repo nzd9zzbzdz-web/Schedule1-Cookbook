@@ -402,13 +402,21 @@ namespace RecipePlanner.PhoneApp
             self._restColour = rest;
             self._hotColour = hot;
             if (glow != null) glow.color = rest;
+
+#if IL2CPP
+            // This type cannot implement IPointerEnterHandler here, so the events have to be
+            // delivered by something that can. EventTrigger is a real Unity component and does
+            // exactly that — see UiInterop.OnHover. Without it hover never fired at all, and the
+            // effects card was reachable only by clicking a row.
+            UiInterop.OnHover(target, self.Set);
+#endif
             return self;
         }
 
         public void OnPointerEnter(PointerEventData eventData) => Set(true);
         public void OnPointerExit(PointerEventData eventData) => Set(false);
 
-        private void Set(bool hot)
+        internal void Set(bool hot)
         {
             if (_hot == hot) return;
             _hot = hot;
