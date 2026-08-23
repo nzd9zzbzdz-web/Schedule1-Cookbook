@@ -5,7 +5,7 @@ namespace RecipePlanner.Game.Binding
     /// <summary>
     /// One game type we depend on, plus the exact members we touch.
     ///
-    /// Every entry was confirmed to exist in Schedule I 0.4.5f2 by dumping global-metadata.dat —
+    /// Every entry is confirmed to exist in the build named by VerifiedAgainstGameVersion —
     /// see docs/00-PHASE-0-AUDIT.md. This table is the machine-readable form of that audit, and
     /// SymbolGuard checks it against the running game before a single patch is applied.
     /// </summary>
@@ -27,7 +27,14 @@ namespace RecipePlanner.Game.Binding
 
     public static class HookTable
     {
-        public const string VerifiedAgainstGameVersion = "0.4.5f2";
+        /// <summary>
+        /// The build every entry below has been checked against with tools/HookVerifier.
+        ///
+        /// Shown to the player when the symbol check fails, so it has to be true — telling someone
+        /// their game diverged from a version the mod was never actually tested on sends them
+        /// looking in the wrong place. Update it whenever the table is re-verified.
+        /// </summary>
+        public const string VerifiedAgainstGameVersion = "0.4.6f13";
 
         // ---- namespaces ----
         public const string NsObjects = "ScheduleOne.ObjectScripts.";

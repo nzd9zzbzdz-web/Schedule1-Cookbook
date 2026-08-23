@@ -121,7 +121,7 @@ which is the intended behaviour:
 ```
 [Schedule_I_Cookbook] Symbol check FAILED — tracking disabled to avoid recording incorrect statistics.
 [Schedule_I_Cookbook]   [BLOCKING] ScheduleOne.ObjectScripts.MixingStation: missing MixingDone()
-[Schedule_I_Cookbook]   Hook table was verified against game version 0.4.5f2. If the game updated,
+[Schedule_I_Cookbook]   Hook table was verified against game version 0.4.6f13. If the game updated,
                    the hook table needs re-auditing: node tools/il2cpp-dump/dump.js '<type-regex>'
 ```
 
