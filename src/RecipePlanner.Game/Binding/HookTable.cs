@@ -91,7 +91,8 @@ namespace RecipePlanner.Game.Binding
             new HookDefinition
             {
                 TypeName = MixOperation,
-                Purpose = "The batch itself (audit §2.1)",
+                Purpose = "The batch itself, and how its product is resolved (audit §2.1)",
+                Methods = new[] { "IsOutputKnown", "GetOutput" },
                 Members = new[] { "ProductID", "ProductQuality", "IngredientID", "Quantity" }
             },
 
@@ -247,6 +248,73 @@ namespace RecipePlanner.Game.Binding
                 TypeName = "ScheduleOne.Effects.MixMaps.MixerMapEffect",
                 Purpose = "One effect's region on the map",
                 Members = new[] { "Position", "Radius", "Property" },
+                Optional = true
+            },
+
+            // ================= reflection that had no entry =================
+            // These were all reached by reflection and none were verified — the same hole the
+            // pricing path had, found by auditing every Reflect.Get(x, "Member") literal in
+            // RecipePlanner.Game against the shipped assemblies rather than against memory.
+            //
+            // All Optional, deliberately, including the two that feed the idempotency key. A
+            // Required entry disables tracking outright when it fails, and these were verified
+            // statically but never on a running game — getting one wrong would take the mod down
+            // for everyone. Optional still surfaces the break in the symbol check, which is the
+            // whole point. Promote them once someone has confirmed them live.
+            new HookDefinition
+            {
+                TypeName = "ScheduleOne.GameTime.TimeManager",
+                Purpose = "Game clock — feeds the idempotency key that stops batches double-counting",
+                Members = new[] { "CurrentTime", "ElapsedDays" },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = "ScheduleOne.EntityFramework.BuildableItem",
+                Purpose = "Station identity — the other half of the idempotency key (audit §5)",
+                Members = new[] { "GUID", "ItemInstance" },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = NsNet + "Lobby",
+                Purpose = "Player count — decides whether an unobserved batch may be attributed locally",
+                Members = new[] { "PlayerCount" },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = NsPlayer + "Player",
+                Purpose = "Identity match when resolving a station's user (inherited from NetworkBehaviour)",
+                Members = new[] { "NetworkObject" },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = NsProduct + "ProductManager",
+                Purpose = "Learned mix recipes; empty at runtime until learned, hence the save-file fallback",
+                Members = new[] { "mixRecipes" },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = NsProduct + "MixRecipeData",
+                Purpose = "One recorded recipe row: product + mixer -> output",
+                Members = new[] { "Product", "Mixer", "Output" },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = NsProduct + "ProductDefinition",
+                Purpose = "Computed addictiveness, preferred over the base value",
+                Methods = new[] { "GetAddictiveness" },
+                Optional = true
+            },
+            new HookDefinition
+            {
+                TypeName = "ScheduleOne.Effects.Effect",
+                Purpose = "Effect blurb shown in the mixing guide",
+                Members = new[] { "Description" },
                 Optional = true
             }
         };

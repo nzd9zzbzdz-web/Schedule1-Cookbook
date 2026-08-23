@@ -56,10 +56,10 @@ namespace RecipePlanner.Game.Binding
                 var instance = Singleton(_timeManagerType);
                 if (instance == null) return 0;
 
-                var value = Reflect.Get(instance, "CurrentTime");
-                if (value != null) { try { return Convert.ToInt32(value); } catch { } }
-
-                return Reflect.GetInt(instance, "TimeOfDay");
+                // CurrentTime only. A "TimeOfDay" fallback used to sit here and TimeManager has no
+                // such member — it was a guess that could never fire. The hook table now verifies
+                // CurrentTime, so a rename is reported rather than silently papered over.
+                return Reflect.GetInt(instance, "CurrentTime");
             }
         }
 
